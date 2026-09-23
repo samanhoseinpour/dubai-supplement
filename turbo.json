@@ -1,0 +1,26 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "envMode": "strict",
+  "globalPassThroughEnv": ["TESTCONTAINERS_*", "DOCKER_HOST"],
+  "globalDependencies": ["pnpm-workspace.yaml", ".node-version"],
+  "remoteCache": { "enabled": false },
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "*.tsbuildinfo"]
+    },
+    "dev": { "dependsOn": ["^build"], "persistent": true, "cache": false },
+    "lint": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] },
+    "test": { "dependsOn": ["^build"] },
+    "test:integration": { "dependsOn": ["^build"], "cache": false },
+    "boundaries": { "dependsOn": ["^build"] },
+    "e2e": { "dependsOn": ["^build"], "cache": false },
+    "api#openapi": { "dependsOn": ["build"], "outputs": ["openapi.json"] },
+    "api#seed": { "dependsOn": ["build"], "cache": false },
+    "@ds/api-client#generate": {
+      "dependsOn": ["api#openapi"],
+      "outputs": ["src/generated/**"]
+    }
+  }
+}

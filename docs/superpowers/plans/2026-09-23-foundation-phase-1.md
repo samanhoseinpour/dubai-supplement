@@ -560,7 +560,7 @@ git commit -m "chore(config): add shared TypeScript configs"
 Spec: §4.1, §4.2, §4.3(5), §7.2. Three flat configs. The `no-restricted-imports` and `no-restricted-syntax` rules here are how several of the spec's prose rules become machine-enforced.
 
 **Files:**
-- Create: `packages/config-eslint/package.json`, `base.js`, `nest.js`, `next.js`
+- Create: `packages/config-eslint/package.json`, `base.js`, `nest.js`, `next.js`, `rtl.js`
 - Create: `eslint.config.js` (repository root)
 
 **Interfaces:**
@@ -727,9 +727,9 @@ This is the rule most likely to be written wrong, so prove it both ways before t
 mkdir -p /tmp/rtlcheck
 printf 'export const a = "ms-4 text-start"\n' > /tmp/rtlcheck/good.ts
 printf 'export const b = "ml-4 text-left"\n'  > /tmp/rtlcheck/bad.ts
-pnpm exec eslint --no-eslintrc --config packages/config-eslint/next.js /tmp/rtlcheck/good.ts
+"$ROOT/node_modules/.bin/eslint" --no-config-lookup --config packages/config-eslint/next.js /tmp/rtlcheck/good.ts
 echo "good exit: $?"
-pnpm exec eslint --no-eslintrc --config packages/config-eslint/next.js /tmp/rtlcheck/bad.ts
+"$ROOT/node_modules/.bin/eslint" --no-config-lookup --config packages/config-eslint/next.js /tmp/rtlcheck/bad.ts
 echo "bad exit: $?"
 rm -rf /tmp/rtlcheck
 ```

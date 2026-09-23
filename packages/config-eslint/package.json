@@ -1,0 +1,18 @@
+{
+  "name": "@ds/config-eslint",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./nest": "./nest.js",
+    "./next": "./next.js"
+  },
+  "dependencies": {
+    "typescript-eslint": "catalog:",
+    "eslint-plugin-boundaries": "catalog:"
+  },
+  "scripts": {
+    "lint": "eslint ."
+  }
+}

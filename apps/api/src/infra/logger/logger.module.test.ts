@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { pinoHttp, type Options } from 'pino-http'
 import { buildLoggerOptions } from './logger.module.js'
+// The config barrel evaluates `ConfigModule`, whose `forRoot({ envFilePath:
+// '.env', validate })` runs at decoration time: this file needs a schema-valid
+// environment at import, exactly as the integration tests do.
 import { AppConfig, EnvSchema } from '../config/index.js'
+
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
 
 const config = (over: Record<string, string> = {}) =>
   new AppConfig(
@@ -47,6 +52,11 @@ describe('buildLoggerOptions', () => {
     expect(httpOptions(config({ NODE_ENV: 'production' })).transport).toBeUndefined()
   })
 
+  // pino-pretty is a devDependency: only development may reach for it.
+  it('attaches no transport outside development', () => {
+    expect(httpOptions(config({ NODE_ENV: 'test' })).transport).toBeUndefined()
+  })
+
   it('honours an inbound x-request-id instead of inventing a new one', () => {
     const genReqId = httpOptions(config()).genReqId
     const req = { headers: { 'x-request-id': 'abc-123' } }
@@ -58,6 +68,19 @@ describe('buildLoggerOptions', () => {
     const id = genReqId?.({ headers: {} } as never, {} as never)
     expect(typeof id).toBe('string')
     expect(id).not.toHaveLength(0)
+  })
+
+  // The id is echoed back and searched on, so it is a plain token or nothing:
+  // an oversized or oddly spelt value is replaced, never trusted.
+  it('mints a UUID instead of an inbound id that is not a plain token', () => {
+    const genReqId = httpOptions(config()).genReqId
+    const idFor = (value: string) =>
+      genReqId?.({ headers: { 'x-request-id': value } } as never, {} as never)
+    for (const value of ['a'.repeat(129), 'not a token', 'id;drop', '/path?x=1', '%41', '']) {
+      expect(idFor(value)).toMatch(UUID_V4)
+    }
+    expect(idFor('a'.repeat(128))).toBe('a'.repeat(128))
+    expect(idFor('req_1.0-b')).toBe('req_1.0-b')
   })
 })
 

@@ -112,4 +112,18 @@ describe('request logging, end to end', () => {
     const { parsed } = await completedLine()
     expect(parsed.req.id).toMatch(UUID_V4)
   })
+
+  // The header itself is still logged, once, like any other request header;
+  // it is the id — echoed back and searched on — that must not carry it.
+  it('replaces an inbound id that is not a plain token with a UUID', async () => {
+    const oversized = `not a token; ${'x'.repeat(200)}`
+    await app.inject({
+      method: 'GET',
+      url: '/health/live',
+      headers: { 'x-request-id': oversized },
+    })
+
+    const { parsed } = await completedLine()
+    expect(parsed.req.id).toMatch(UUID_V4)
+  })
 })

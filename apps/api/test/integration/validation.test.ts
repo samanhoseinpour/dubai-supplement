@@ -210,11 +210,12 @@ describe('global validation', () => {
       expect(JSON.parse(res.payload)).toEqual({ id: A_UUID })
     })
 
-    it('is rejected when it does not', async () => {
+    // A scalar schema has no path of its own; the pipe names the parameter.
+    it('is rejected when it does not, naming the parameter', async () => {
       const res = await app.inject({ method: 'GET', url: '/things/not-a-uuid' })
       expect(problem(res)).toMatchObject({
         code: 'VALIDATION_FAILED',
-        errors: [{ path: '', message: expect.any(String) as string }],
+        errors: [{ path: 'id', message: expect.stringContaining('UUID') as string }],
       })
     })
   })

@@ -5,11 +5,11 @@ dist/
 coverage/
 .turbo/
 *.tsbuildinfo
-**/.env
-**/.env.local
-**/.env.*.local
+**/.env*
+!**/.env.example
 .claude/settings.local.json
 playwright-report/
 test-results/
 .vitest/
 .superpowers/
+*.bak

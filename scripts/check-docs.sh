@@ -40,6 +40,25 @@ if [ -n "$link_report" ]; then
   done <<< "$link_report"
 fi
 
+# 4b. Config files that exist but have been gutted. The manifest checks
+#     presence; this checks that the content still does its job. lefthook.yml
+#     was silently reduced to an all-comment document once, and `lefthook
+#     validate` reported "All good" because an empty config is vacuously valid.
+assert_contains() { # assert_contains <file> <needle>...
+  f="$1"; shift
+  [ -f "$f" ] || { fail "missing file: $f"; return; }
+  for needle in "$@"; do
+    grep -Fq "$needle" "$f" || fail "$f no longer contains: $needle"
+  done
+}
+assert_contains lefthook.yml "pre-commit:" "commit-msg:" "pre-push:" \
+  "check-commit-msg.sh" "audit:authors" "commitlint"
+assert_contains turbo.json '"envMode": "strict"' '"remoteCache"'
+assert_contains .gitleaks.toml "useDefault = true"
+assert_contains pnpm-workspace.yaml "catalogMode: strict" "minimumReleaseAge"
+assert_contains package.json '"packageManager"' '"check:docs"' '"audit:authors"'
+assert_contains commitlint.config.mjs "config-conventional" "scope-enum"
+
 # 5. Shell files are shellcheck-clean.
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck .claude/hooks/*.sh scripts/*.sh || fail "shellcheck reported problems"

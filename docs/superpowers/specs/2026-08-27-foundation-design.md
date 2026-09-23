@@ -380,7 +380,7 @@ Types via `z.infer` and exported alongside. Rule: contracts describe **HTTP shap
 
 ### 9.1 Machine prerequisites
 
-pnpm 11 (`npm i -g pnpm@<pinned>`), OrbStack (Docker), Node 24 (already present), and `jq` + `shellcheck` (`brew install jq shellcheck` — used by `.claude/hooks/*.sh` and `scripts/check-docs.sh`, i.e. by `pnpm check`). Iranian registry mirrors are documented in `docs/runbooks/iran-mirrors.md` (Docker `registry-mirrors`, `TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX` — covers all three test images, npm mirror) as opt-in machine configuration, never committed defaults.
+pnpm 12 (`npm i -g pnpm@<pinned>`), OrbStack (Docker), Node 24 (already present), and `jq` + `shellcheck` (`brew install jq shellcheck` — used by `.claude/hooks/*.sh` and `scripts/check-docs.sh`, i.e. by `pnpm check`). Iranian registry mirrors are documented in `docs/runbooks/iran-mirrors.md` (Docker `registry-mirrors`, `TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX` — covers all three test images, npm mirror) as opt-in machine configuration, never committed defaults.
 
 ### 9.2 `infra/compose.yaml`
 
@@ -584,7 +584,7 @@ Products/variants/categories beyond Brand, inventory, cart, checkout and the Wha
 
 1. ~~**Commit identity**~~ — **DONE 2026-09-23.** The GitHub noreply address `105006550+samanhoseinpour@users.noreply.github.com` was chosen; the three existing commits were re-authored to it and repo-local `user.name`/`user.email` are set. Still to record in `scripts/audit-authors.allowed` when that file is created (Phase 1). Confirm "Keep my email addresses private" and "Block command line pushes that expose my email" are on.
 2. ~~**Research documents public or private**~~ — **DONE 2026-09-23.** Moved out: both files now live in the private repository `~/Desktop/dubai-supplement-research/` and were stripped from this repository's git history with `git filter-repo` (nothing had been pushed). This spec and `north-star.md` cite them by title and date only.
-3. Install pnpm 11 and OrbStack; optionally configure Iranian registry mirrors.
+3. Install pnpm 12 and OrbStack; optionally configure Iranian registry mirrors.
 4. Create the GitHub repository (the plan runs `gh repo create --public` with Saman present) and enable the `main` ruleset and push protection.
 5. Liara account, private network, DBs, storage, apps (disable the api subdomain), API token → `LIARA_API_TOKEN`, `LIARA_APP_API`, `LIARA_APP_WEB` secrets; run `first-deploy.md`.
 6. ArvanCloud account (DNS/CDN); confirm the real-IP header name.

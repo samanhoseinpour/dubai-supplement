@@ -11,6 +11,18 @@ secretGroup = 2
 [rules.allowlist]
 paths = ['''\.env\.example$''']
 
+[[rules]]
+id = "connection-string-with-credentials"
+description = "URI with embedded credentials (postgres://user:pass@host, redis://:pass@host)"
+regex = '''[a-zA-Z][a-zA-Z0-9+.-]*://[^\s:/@]*:[^\s:/@]+@[^\s/"']+'''
+
+[rules.allowlist]
+description = "Canonical local development values are documented on purpose (spec Appendix B)"
+regexes = [
+  '''://[^\s:/@]*:[^\s:/@]+@(127\.0\.0\.1|localhost|postgres|redis|host)\b''',
+]
+paths = ['''\.env\.example$''', '''^docs/''']
+
 [allowlist]
 description = "Committed placeholder files never hold real values"
 paths = ['''\.env\.example$''', '''pnpm-lock\.yaml$''']

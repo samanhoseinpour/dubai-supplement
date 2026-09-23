@@ -5,6 +5,23 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 PASS=0
 FAIL=0
+
+# This script deliberately breaks the working tree to prove the checker
+# notices. Without a trap, a Ctrl-C between a mutation and its restore
+# leaves a padded CLAUDE.md, a drifted .liaraignore, a key-shaped string in
+# .mcp.json and stray *.bak files behind.
+restore() {
+  for b in "$ROOT"/CLAUDE.md.bak "$ROOT"/.mcp.json.bak "$ROOT"/.liaraignore.bak \
+           "$ROOT"/lefthook.yml.bak "$ROOT"/adr.bak; do
+    [ -f "$b" ] || continue
+    case "$b" in
+      *adr.bak) mv "$b" "$ROOT/docs/decisions/0002-drizzle-over-prisma.md" ;;
+      *) mv "$b" "${b%.bak}" ;;
+    esac
+  done
+  git -C "$ROOT" checkout -- docs/architecture/north-star.md docs/glossary.md 2>/dev/null || true
+}
+trap restore EXIT INT TERM
 ok()  { echo "  PASS  $1"; PASS=$((PASS + 1)); }
 bad() { echo "  FAIL  $1"; FAIL=$((FAIL + 1)); }
 run() { ( cd "$ROOT" && bash scripts/check-docs.sh ) >/dev/null 2>&1; }
@@ -46,6 +63,24 @@ cp "$ROOT/docs/decisions/0002-drizzle-over-prisma.md" "$ROOT/adr.bak"
 grep -v '^## Considered Options$' "$ROOT/adr.bak" > "$ROOT/docs/decisions/0002-drizzle-over-prisma.md"
 if run; then bad "ADR missing a MADR heading caught"; else ok "ADR missing a MADR heading caught"; fi
 mv "$ROOT/adr.bak" "$ROOT/docs/decisions/0002-drizzle-over-prisma.md"
+
+# C2: every .env form except .env.example must be ignored. A developer
+# creating apps/api/.env.production with a real DATABASE_URL and running
+# `git add -A` would otherwise publish it to a public repository.
+env_ok=1
+for f in .env .env.local .env.production .env.development .env.test .env.staging \
+         apps/api/.env.production; do
+  git -C "$ROOT" check-ignore -q "$f" || { echo "    not ignored: $f"; env_ok=0; }
+done
+git -C "$ROOT" check-ignore -q .env.example && { echo "    .env.example must stay committable"; env_ok=0; }
+if [ "$env_ok" -eq 1 ]; then ok "every .env form ignored, .env.example is not"; else bad "every .env form ignored, .env.example is not"; fi
+
+# I2: the manifest guards existence, but the lefthook regression was a file
+# that existed and had been gutted. Assert content, not presence.
+cp "$ROOT/lefthook.yml" "$ROOT/lefthook.yml.bak"
+{ echo "# gutted"; } > "$ROOT/lefthook.yml"
+if run; then bad "gutted lefthook.yml caught"; else ok "gutted lefthook.yml caught"; fi
+mv "$ROOT/lefthook.yml.bak" "$ROOT/lefthook.yml"
 
 echo
 echo "passed: $PASS   failed: $FAIL"

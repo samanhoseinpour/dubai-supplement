@@ -1,4 +1,6 @@
 ---
+paths:
+  - '**'
 ---
 
 # Security rules

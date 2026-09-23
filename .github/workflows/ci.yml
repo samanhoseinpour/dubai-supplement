@@ -20,10 +20,10 @@ jobs:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
@@ -31,12 +31,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - run: pnpm check:affected
+        env:
+          # turbo resolves --affected's base differently per event: on push it
+          # reads github.event.before, but on pull_request it tries the bare
+          # ref `main`, which actions/checkout never creates locally (it checks
+          # out the merge ref in detached HEAD). Resolution fails regardless of
+          # fetch-depth and turbo falls back to "assume everything changed".
+          # Setting the base explicitly is what actually makes --affected work.
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
 
   authors:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - run: bash scripts/audit-authors.sh
@@ -47,10 +55,10 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           # Required on pull_request events: the action reads the PR's commit
           # range through the API. Without it the job errors immediately

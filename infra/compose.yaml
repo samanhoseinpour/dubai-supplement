@@ -1,0 +1,82 @@
+name: dubaisupp
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dubaisupp
+      POSTGRES_PASSWORD: dubaisupp
+      POSTGRES_DB: dubaisupp
+    ports: ['127.0.0.1:5432:5432']
+    volumes: ['pgdata:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dubaisupp -d dubaisupp']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    ports: ['127.0.0.1:6379:6379']
+    volumes: ['redisdata:/data']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+    ports: ['127.0.0.1:9000:9000', '127.0.0.1:9001:9001']
+    volumes: ['rustfsdata:/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/health/ready >/dev/null || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Creates the bucket once the gateway is healthy, then exits 0. The image ships
+  # no CLI (and MinIO's `mc` is a different project), so the image's own curl
+  # sends a SigV4-signed PUT. RustFS answers 200 for a bucket that already
+  # exists; 409 is the S3-standard "already owned by you".
+  rustfs-init:
+    image: rustfs/rustfs:1.0.0
+    depends_on:
+      rustfs: { condition: service_healthy }
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        code=$$(curl -sS -o /dev/null -w '%{http_code}' --aws-sigv4 aws:amz:default:s3 \
+          --user rustfsadmin:rustfsadmin -X PUT http://rustfs:9000/dubaisupp)
+        case "$$code" in
+          200|409) echo "bucket dubaisupp ready (HTTP $$code)" ;;
+          *) echo "creating bucket dubaisupp failed (HTTP $$code)" >&2; exit 1 ;;
+        esac
+    restart: 'no'
+
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    # Not a real dependency. `up --wait` treats a one-shot service that exited 0
+    # as a failure unless some service depends on it with
+    # service_completed_successfully; this is the least consequential place for
+    # that edge, and it makes `pnpm db:up` return only once the bucket exists.
+    depends_on:
+      rustfs-init: { condition: service_completed_successfully }
+    ports: ['127.0.0.1:1025:1025', '127.0.0.1:8025:8025']
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8025/readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  redisdata:
+  rustfsdata:

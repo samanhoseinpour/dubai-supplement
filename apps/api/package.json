@@ -14,6 +14,7 @@
   "dependencies": {
     "@nest-lab/throttler-storage-redis": "catalog:",
     "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-fastify": "catalog:",
     "@nestjs/terminus": "catalog:",
@@ -23,7 +24,8 @@
     "pino": "catalog:",
     "pino-http": "catalog:",
     "reflect-metadata": "catalog:",
-    "rxjs": "catalog:"
+    "rxjs": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@ds/config-eslint": "workspace:*",

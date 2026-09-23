@@ -603,7 +603,7 @@ Products/variants/categories beyond Brand, inventory, cart, checkout and the Wha
 | pino-http | (transitive) | **11.0.0** | Now an explicit peer of nestjs-pino 5 |
 | `@nestjs/throttler` | 6.5.0 | **6.7.0** | 6.5.0 also capped at `^11`; 6.6.0 added `^12`. 6.7.0 masks IPv6 trackers to `/64` → keys rotate once |
 | pnpm | 11.24.0 | **12.5.1** | Rust rewrite. All nine settings this spec relies on were verified live on 12.5.1, as was a `turbo prune --docker` → frozen-install round-trip. Fallback: 11.27.1 (the 11 line still ships) |
-| turbo | 2.10.12 | **2.11.3** | ≥ 2.11.1 required — earlier versions hit `ERR_PNPM_IGNORED_BUILDS` under pnpm 12 |
+| turbo | 2.10.12 | **2.11.2** | ≥ 2.11.1 required — earlier versions hit `ERR_PNPM_IGNORED_BUILDS` under pnpm 12 |
 | Vitest, `@vitest/coverage-v8` | 4.1.11 | **5.0.1** | 4.x has had no release since 5.0 shipped and no stated maintenance policy. coverage-v8 peers Vitest **exactly** |
 | vite | (transitive) | **8.3.0** | Vitest 5 made Vite a peer instead of a dependency |
 | Zod | 4.4.3 | **4.6.5** | Skipping 4.5.x (recursive-schema memory regression, fixed in 4.6.0). Behavioural changes audited in §8.1 |
@@ -613,7 +613,7 @@ Products/variants/categories beyond Brand, inventory, cart, checkout and the Wha
 | Playwright | 1.62.1 | 1.63.0 | Routine |
 | dependency-cruiser | 18.2.0 | 18.4.0 | Routine |
 | lefthook, commitlint | 2.1.10 / 21.2.2 | 2.1.14 / 21.2.3 | Routine |
-| Prettier | 3.9.6 | 3.9.9 | Routine |
+| Prettier | 3.9.6 | 3.9.8 | Routine |
 | shadcn, `@base-ui/react` | 4.19.0 / 1.7.0 | 4.21.0 / 1.8.0 | Routine |
 | drizzle-orm, drizzle-kit | 0.45.2 / 0.31.10 | 0.45.3 / 0.31.11 | Patch. **1.0 still `rc.5` — D6 holds** |
 | fastify | 5.12.1 | 5.12.5 | Arrives with `@nestjs/platform-fastify` 12.1.0 |

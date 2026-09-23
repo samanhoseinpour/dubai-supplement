@@ -6,7 +6,7 @@
 
 **Architecture:** A pnpm 12 workspace driven by Turborepo, with every rule enforced by a tool rather than by prose. Two shared configuration packages (`@ds/config-typescript`, `@ds/config-eslint`) that later apps extend; four shell scripts that gate commits and pushes; a `.claude/` directory that teaches agents the repository's non-negotiables; and a CI workflow whose jobs exist from the first push even though most have nothing to check yet. Phase 1 ends when `pnpm install` succeeds at the root and `main` is protected on GitHub.
 
-**Tech Stack:** pnpm 12.5.1 · Turborepo 2.11.3 · TypeScript 6.0.3 · ESLint 10.11.0 flat config · Prettier 3.9.9 · lefthook 2.1.14 · commitlint 21.2.3 · sherif 1.13.0 · gitleaks · GitHub Actions
+**Tech Stack:** pnpm 12.5.1 · Turborepo 2.11.2 · TypeScript 6.0.3 · ESLint 10.11.0 flat config · Prettier 3.9.8 · lefthook 2.1.14 · commitlint 21.2.3 · sherif 1.13.0 · gitleaks · GitHub Actions
 
 **Spec:** `docs/superpowers/specs/2026-08-27-foundation-design.md` (2026-08-27, revised 2026-09-23). Read it alongside this plan — every task argues from a numbered section of it.
 
@@ -80,7 +80,7 @@ Spec: §4.1, §4.2, §9.3. This task is the prerequisite for the NestJS 12 spike
 
 - [ ] **Step 1: Write `pnpm-workspace.yaml`**
 
-Every pnpm setting lives here — pnpm ignores the `pnpm` field of `package.json` and warns about it. With `packageManager` pinned, an *unrecognised* key here is a hard `ERR_PNPM_UNRECOGNIZED_WORKSPACE_SETTINGS` error, so key names matter. All names below were verified against pnpm 12.5.1 on 2026-09-23.
+Every pnpm setting lives here — pnpm ignores the `pnpm` field of `package.json` and warns about it. With `packageManager` pinned, an *unrecognised* key here is a hard `ERR_PNPM_UNRECOGNIZED_WORKSPACE_SETTINGS` error, so key names matter. All names below were verified against pnpm 12.5.1 on 2026-09-23. `allowBuilds` takes a **mapping**, not a list — a list fails with `load configuration ... expected mapping start`, which is a YAML error rather than the unrecognised-key error, so it is easy to mistake for a different problem.
 
 ```yaml
 packages:
@@ -94,10 +94,10 @@ forceLegacyDeploy: true
 injectWorkspacePackages: false
 
 allowBuilds:
-  - esbuild
-  - "@swc/core"
-  - sharp
-  - lefthook
+  esbuild: true
+  "@swc/core": true
+  sharp: true
+  lefthook: true
 
 peerDependencyRules:
   allowedVersions:
@@ -106,8 +106,8 @@ peerDependencyRules:
 
 catalog:
   typescript: 6.0.3
-  turbo: 2.11.3
-  prettier: 3.9.9
+  turbo: 2.11.2
+  prettier: 3.9.8
   prettier-plugin-tailwindcss: 0.8.1
   eslint: 10.11.0
   typescript-eslint: 8.70.1

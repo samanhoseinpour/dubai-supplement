@@ -2,6 +2,7 @@ import {
   Catch,
   HttpException,
   HttpStatus,
+  Logger,
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common'
@@ -64,8 +65,24 @@ interface Classification {
   errors?: ProblemDetails['errors']
 }
 
+/**
+ * One issue-path segment as text. Zod emits PropertyKey segments; the
+ * Standard Schema spec also permits `{ key }` ones, which a bare String()
+ * would render as "[object Object]". Typed `unknown` on purpose: a filter
+ * must not throw, and `typeof null === 'object'` would otherwise make
+ * `segment.key` do exactly that for a segment no schema is supposed to emit.
+ */
+function segmentToString(segment: unknown): string {
+  return typeof segment === 'object' && segment !== null && 'key' in segment
+    ? String(segment.key)
+    : String(segment)
+}
+
 @Catch()
 export class ProblemFilter implements ExceptionFilter {
+  // Writes through whatever `app.useLogger` installed — pino, in `createApp`.
+  private readonly logger = new Logger(ProblemFilter.name)
+
   constructor(private readonly nodeEnv: Env['NODE_ENV']) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
@@ -74,6 +91,15 @@ export class ProblemFilter implements ExceptionFilter {
     const request = http.getRequest<IdentifiedRequest>()
 
     const { status, code, detail, errors } = this.classify(exception)
+
+    // A 5xx is a bug or an outage, and this is the only place its stack can
+    // be recorded: Nest's own filter no longer runs once this one matches,
+    // and pino-http's request line carries a synthesised "failed with status
+    // code 500", not the exception. `AppError.meta` exists for this line.
+    if (status >= 500) {
+      const meta = exception instanceof AppError ? exception.meta : undefined
+      this.logger.error({ ...meta, err: exception, requestId: request.id, code })
+    }
 
     const body: ProblemDetails = {
       type: `urn:problem:${code}`,
@@ -94,13 +120,9 @@ export class ProblemFilter implements ExceptionFilter {
         status: exception.status,
         code: exception.code,
         detail: exception.detail,
-        // Zod issue paths are PropertyKey[]; the Standard Schema spec also
-        // permits `{ key }` segments, which a bare String() would render as
-        // "[object Object]". The wire shape pins `a.1`, not `a[1]` (spec §5.5).
+        // The wire shape pins `a.1`, not Zod's `a[1]` (spec §5.5).
         errors: exception.issues.map((issue) => ({
-          path: (issue.path ?? [])
-            .map((segment) => String(typeof segment === 'object' ? segment.key : segment))
-            .join('.'),
+          path: (issue.path ?? []).map(segmentToString).join('.'),
           message: issue.message,
         })),
       }

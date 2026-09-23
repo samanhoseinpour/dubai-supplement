@@ -1983,7 +1983,7 @@ Expected: PASS, 4/4.
 
 - [ ] **Step 5: Wire the real throttler into `AppModule`**
 
-Replace the spike's inline `ThrottlerModule.forRoot(...)` with an async factory that takes the Redis client from Task 15's provider once it exists; until then keep constructing `new Redis(config.redisUrl, { lazyConnect: true })` in the factory and inject `AppConfig`:
+Replace the spike's inline `ThrottlerModule.forRoot(...)` with an async factory that takes the Redis client from Task 14's provider once it exists; until then keep constructing `new Redis(config.redisUrl, { lazyConnect: true })` in the factory and inject `AppConfig`:
 
 ```ts
 ThrottlerModule.forRootAsync({
@@ -2654,7 +2654,7 @@ export async function teardown(): Promise<void> {
 }
 ```
 
-> The bucket is created by the storage port's own setup in Task 15, not here — `rustfs/rustfs` has no equivalent of MinIO's `mc mb` baked into the image entrypoint.
+> The bucket is created by the storage port's own setup in Task 14, not here — `rustfs/rustfs` has no equivalent of MinIO's `mc mb` baked into the image entrypoint.
 
 - [ ] **Step 3: Write the truncation helper**
 

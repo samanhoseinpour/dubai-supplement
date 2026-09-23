@@ -1016,7 +1016,9 @@ const corsOrigins = z
   })
 
 export const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Required, no default: a deploy that forgets it must fail at this gate rather
+  // than inside a pino worker loading a devDependency production never installed.
+  NODE_ENV: z.enum(['development', 'test', 'production']),
   PROCESS_ROLE: z.enum(['api', 'worker', 'all']).default('api'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -1251,6 +1253,7 @@ import { EnvSchema } from '../config/env.schema.js'
 const config = (over: Record<string, string> = {}) =>
   new AppConfig(
     EnvSchema.parse({
+      NODE_ENV: 'test',
       DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/d',
       REDIS_URL: 'redis://127.0.0.1:6379/0',
       S3_ENDPOINT: 'http://127.0.0.1:9000',
@@ -1868,6 +1871,7 @@ class PingController {
 const makeConfig = (over: Record<string, string> = {}) =>
   new AppConfig(
     EnvSchema.parse({
+      NODE_ENV: 'test',
       DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/d',
       REDIS_URL: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379/0',
       S3_ENDPOINT: 'http://127.0.0.1:9000',

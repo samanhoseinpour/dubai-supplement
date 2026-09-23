@@ -3,7 +3,7 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Logger } from 'nestjs-pino'
 import { AppModule } from './app.module.js'
 import { AppConfig } from './infra/config/index.js'
-import { ProblemFilter } from './infra/http/index.js'
+import { buildValidationPipe, ProblemFilter } from './infra/http/index.js'
 
 export async function createApp(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -21,6 +21,7 @@ export async function createApp(): Promise<NestFastifyApplication> {
     { rawBody: true, bufferLogs: true },
   )
   app.useLogger(app.get(Logger))
+  app.useGlobalPipes(buildValidationPipe())
   app.useGlobalFilters(new ProblemFilter(app.get(AppConfig).nodeEnv))
   app.enableShutdownHooks()
   return app

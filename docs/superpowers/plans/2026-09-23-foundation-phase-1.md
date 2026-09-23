@@ -32,7 +32,7 @@ Five failure modes the spec implies but that no task's happy path would exercise
 2. **A required status check that has never reported blocks every PR.** The spec calls this out in §13.1. If `check`, `openapi` or `e2e` were added to the ruleset before they had ever run, `main` would be permanently unmergeable. Task 14 adds **only** `authors` and `secrets` at first-push time and defers the rest to Phase 4.
 3. **macOS is case-insensitive; the CI runner is not.** A relative documentation link written as `north-star.md` but stored as `North-Star.md` resolves locally and 404s in CI. `check-docs.sh` (Task 8) compares each link target against the exact name `git ls-files` reports, not against the filesystem's answer.
 4. **`.dockerignore` and `.liaraignore` drift apart silently.** §9.3 requires them byte-identical because Liara reads exactly one ignore file. Nothing would notice until a deploy shipped `node_modules`. `check-docs.sh` (Task 8) diffs them and fails if they differ.
-5. **The AI-trailer guard is easy to write too loosely or too tightly.** A message legitimately *documenting* the rule must still be rejected (the guard is a blunt instrument by design, §9.4), but the guard must also survive a multi-line UTF-8 message and must not crash on an empty one. Task 7 tests all three.
+5. **The AI-trailer guard is easy to write too loosely or too tightly.** A message legitimately _documenting_ the rule must still be rejected (the guard is a blunt instrument by design, §9.4), but the guard must also survive a multi-line UTF-8 message and must not crash on an empty one. Task 7 tests all three.
 
 ---
 
@@ -40,29 +40,29 @@ Five failure modes the spec implies but that no task's happy path would exercise
 
 Everything created in this phase. Nothing under `apps/` exists yet.
 
-| Path | Responsibility |
-|---|---|
-| `package.json` | Root scripts (§4.4), `devEngines`, root devDependencies |
-| `pnpm-workspace.yaml` | Workspace globs **and every pnpm setting** — the `pnpm` field of package.json is ignored (§4.2) |
-| `turbo.json` | The task graph and `envMode: strict` (§4.2) |
-| `.node-version` · `.editorconfig` · `.gitattributes` | Editor and runtime pinning |
-| `.gitignore` · `.dockerignore` · `.liaraignore` | Ignore rules; the latter two byte-identical (§9.3) |
-| `.gitleaks.toml` | Secret-scan rules and the `.env.example` allowlist (§10.1) |
-| `prettier.config.mjs` · `commitlint.config.mjs` · `lefthook.yml` | Formatting and git hooks (§9.4) |
-| `packages/config-typescript/` | `base.json` · `nestjs.json` · `nextjs.json` · `library.json` (§4.1) |
-| `packages/config-eslint/` | Shared flat configs: `base` / `nest` / `next` (§4.1) |
-| `scripts/audit-authors.sh` + `.allowed` | Attribution enforcement layer 3 (§13.4) |
-| `scripts/check-commit-msg.sh` | Attribution enforcement layer 2 (§9.4) |
-| `scripts/check-docs.sh` | Definition-of-done 6 (§16) |
-| `docs/architecture/north-star.md` | Bounded contexts, invariants, non-goals — the only always-loaded doc (§4.1) |
-| `docs/glossary.md` · `docs/regulatory.md` | Ubiquitous language; enamad/FDA/redenomination facts (§4.1) |
-| `docs/decisions/` | `0000-template.md` + ADRs 0002–0017 (§12.4) |
-| `docs/runbooks/` | `iran-mirrors.md` · `go-live.md` · `first-deploy.md` (§11.4) |
-| `CLAUDE.md` · `AGENTS.md` · `README.md` · `.mcp.json` | Instruction files (§12.1) |
-| `.claude/rules/*.md` | Path-scoped rules loaded on demand (§12.1) |
-| `.claude/settings.json` · `hooks/` · `agents/` · `skills/` | Agent configuration (§12.2) |
-| `.github/workflows/ci.yml` · `deploy.yml` | CI and deploy (§10) |
-| `.github/PULL_REQUEST_TEMPLATE.md` · `renovate.json` | PR checklist; dependency policy (§9.5, §13.3) |
+| Path                                                             | Responsibility                                                                                  |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `package.json`                                                   | Root scripts (§4.4), `devEngines`, root devDependencies                                         |
+| `pnpm-workspace.yaml`                                            | Workspace globs **and every pnpm setting** — the `pnpm` field of package.json is ignored (§4.2) |
+| `turbo.json`                                                     | The task graph and `envMode: strict` (§4.2)                                                     |
+| `.node-version` · `.editorconfig` · `.gitattributes`             | Editor and runtime pinning                                                                      |
+| `.gitignore` · `.dockerignore` · `.liaraignore`                  | Ignore rules; the latter two byte-identical (§9.3)                                              |
+| `.gitleaks.toml`                                                 | Secret-scan rules and the `.env.example` allowlist (§10.1)                                      |
+| `prettier.config.mjs` · `commitlint.config.mjs` · `lefthook.yml` | Formatting and git hooks (§9.4)                                                                 |
+| `packages/config-typescript/`                                    | `base.json` · `nestjs.json` · `nextjs.json` · `library.json` (§4.1)                             |
+| `packages/config-eslint/`                                        | Shared flat configs: `base` / `nest` / `next` (§4.1)                                            |
+| `scripts/audit-authors.sh` + `.allowed`                          | Attribution enforcement layer 3 (§13.4)                                                         |
+| `scripts/check-commit-msg.sh`                                    | Attribution enforcement layer 2 (§9.4)                                                          |
+| `scripts/check-docs.sh`                                          | Definition-of-done 6 (§16)                                                                      |
+| `docs/architecture/north-star.md`                                | Bounded contexts, invariants, non-goals — the only always-loaded doc (§4.1)                     |
+| `docs/glossary.md` · `docs/regulatory.md`                        | Ubiquitous language; enamad/FDA/redenomination facts (§4.1)                                     |
+| `docs/decisions/`                                                | `0000-template.md` + ADRs 0002–0017 (§12.4)                                                     |
+| `docs/runbooks/`                                                 | `iran-mirrors.md` · `go-live.md` · `first-deploy.md` (§11.4)                                    |
+| `CLAUDE.md` · `AGENTS.md` · `README.md` · `.mcp.json`            | Instruction files (§12.1)                                                                       |
+| `.claude/rules/*.md`                                             | Path-scoped rules loaded on demand (§12.1)                                                      |
+| `.claude/settings.json` · `hooks/` · `agents/` · `skills/`       | Agent configuration (§12.2)                                                                     |
+| `.github/workflows/ci.yml` · `deploy.yml`                        | CI and deploy (§10)                                                                             |
+| `.github/PULL_REQUEST_TEMPLATE.md` · `renovate.json`             | PR checklist; dependency policy (§9.5, §13.3)                                                   |
 
 ---
 
@@ -71,21 +71,23 @@ Everything created in this phase. Nothing under `apps/` exists yet.
 Spec: §4.1, §4.2, §9.3. This task is the prerequisite for the NestJS 12 spike in Phase 2 (§5.1), which requires that the root workspace exists and `pnpm install` passes.
 
 **Files:**
+
 - Create: `package.json`, `pnpm-workspace.yaml`, `.node-version`, `.editorconfig`, `.gitattributes`, `.dockerignore`, `.liaraignore`, `.gitleaks.toml`
 - Modify: `.gitignore` (currently one line, `.DS_Store`)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: the `catalog:` protocol for every later `package.json`; root scripts `pnpm check`, `pnpm check:docs`, `pnpm audit:authors`, `pnpm lint`, `pnpm format` used by Tasks 5–8 and by CI in Task 13.
 
 - [ ] **Step 1: Write `pnpm-workspace.yaml`**
 
-Every pnpm setting lives here — pnpm ignores the `pnpm` field of `package.json` and warns about it. With `packageManager` pinned, an *unrecognised* key here is a hard `ERR_PNPM_UNRECOGNIZED_WORKSPACE_SETTINGS` error, so key names matter. All names below were verified against pnpm 12.5.1 on 2026-09-23. `allowBuilds` takes a **mapping**, not a list — a list fails with `load configuration ... expected mapping start`, which is a YAML error rather than the unrecognised-key error, so it is easy to mistake for a different problem.
+Every pnpm setting lives here — pnpm ignores the `pnpm` field of `package.json` and warns about it. With `packageManager` pinned, an _unrecognised_ key here is a hard `ERR_PNPM_UNRECOGNIZED_WORKSPACE_SETTINGS` error, so key names matter. All names below were verified against pnpm 12.5.1 on 2026-09-23. `allowBuilds` takes a **mapping**, not a list — a list fails with `load configuration ... expected mapping start`, which is a YAML error rather than the unrecognised-key error, so it is easy to mistake for a different problem.
 
 ```yaml
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 
 catalogMode: strict
 minimumReleaseAge: 1440
@@ -95,14 +97,14 @@ injectWorkspacePackages: false
 
 allowBuilds:
   esbuild: true
-  "@swc/core": true
+  '@swc/core': true
   sharp: true
   lefthook: true
 
 peerDependencyRules:
   allowedVersions:
-    "@nest-lab/throttler-storage-redis>@nestjs/common": "12"
-    "@nest-lab/throttler-storage-redis>@nestjs/core": "12"
+    '@nest-lab/throttler-storage-redis>@nestjs/common': '12'
+    '@nest-lab/throttler-storage-redis>@nestjs/core': '12'
 
 catalog:
   typescript: 6.0.3
@@ -116,20 +118,20 @@ catalog:
   dependency-cruiser: 18.4.0
   sherif: 1.13.0
   lefthook: 2.1.14
-  "@commitlint/cli": 21.2.3
-  "@commitlint/config-conventional": 21.2.3
-  "@nestjs/common": 12.1.0
-  "@nestjs/core": 12.1.0
-  "@nestjs/platform-fastify": 12.1.0
-  "@nestjs/testing": 12.1.0
-  "@nestjs/cli": 12.0.5
-  "@nestjs/config": 12.0.1
-  "@nestjs/swagger": 12.0.2
-  "@nestjs/terminus": 12.1.0
-  "@nestjs/throttler": 6.7.0
-  "@nest-lab/throttler-storage-redis": 1.2.0
-  "@fastify/helmet": 13.1.1
-  "@fastify/cookie": 11.1.2
+  '@commitlint/cli': 21.2.3
+  '@commitlint/config-conventional': 21.2.3
+  '@nestjs/common': 12.1.0
+  '@nestjs/core': 12.1.0
+  '@nestjs/platform-fastify': 12.1.0
+  '@nestjs/testing': 12.1.0
+  '@nestjs/cli': 12.0.5
+  '@nestjs/config': 12.0.1
+  '@nestjs/swagger': 12.0.2
+  '@nestjs/terminus': 12.1.0
+  '@nestjs/throttler': 6.7.0
+  '@nest-lab/throttler-storage-redis': 1.2.0
+  '@fastify/helmet': 13.1.1
+  '@fastify/cookie': 11.1.2
   nestjs-pino: 5.2.0
   pino: 10.3.1
   pino-http: 11.0.0
@@ -140,21 +142,21 @@ catalog:
   pg: 8.23.0
   ioredis: 5.11.1
   uuid: 14.0.2
-  "@aws-sdk/client-s3": 3.1138.0
+  '@aws-sdk/client-s3': 3.1138.0
   next: 16.3.6
   react: 19.3.0
   react-dom: 19.3.0
   babel-plugin-react-compiler: 1.0.0
   tailwindcss: 4.3.3
-  "@base-ui/react": 1.8.0
+  '@base-ui/react': 1.8.0
   lucide-react: 1.34.0
-  "@persian-tools/persian-tools": 4.0.4
+  '@persian-tools/persian-tools': 4.0.4
   vite: 8.3.0
   vitest: 5.0.1
-  "@vitest/coverage-v8": 5.0.1
+  '@vitest/coverage-v8': 5.0.1
   testcontainers: 12.1.0
-  "@playwright/test": 1.63.0
-  "@axe-core/playwright": 4.13.0
+  '@playwright/test': 1.63.0
+  '@axe-core/playwright': 4.13.0
   openapi-typescript: 7.13.0
   openapi-fetch: 0.17.0
 ```
@@ -337,9 +339,11 @@ git commit -m "chore: add root workspace, pnpm catalog and ignore files"
 Spec: §4.2 (Task runner row), §4.4. Defines every task name the rest of the repository will implement, so later phases add workspaces rather than edit this file.
 
 **Files:**
+
 - Create: `turbo.json`
 
 **Interfaces:**
+
 - Consumes: the root scripts from Task 1.
 - Produces: task ids `build`, `dev`, `lint`, `typecheck`, `test`, `test:integration`, `boundaries`, `e2e`, plus `api#openapi`, `api#seed` and `@ds/api-client#generate` that Phases 2–3 attach scripts to.
 
@@ -404,9 +408,11 @@ git commit -m "chore: add turborepo task graph"
 Spec: §4.1, §4.2 ("tsconfigs written TS-7-clean — no `baseUrl`, no `paths`"). Four bases that every later workspace extends, so the eventual TypeScript 7 move is mechanical rather than archaeological.
 
 **Files:**
+
 - Create: `packages/config-typescript/package.json`, `base.json`, `nestjs.json`, `nextjs.json`, `library.json`
 
 **Interfaces:**
+
 - Consumes: the `catalog:` from Task 1.
 - Produces: `@ds/config-typescript/base.json`, `/nestjs.json`, `/nextjs.json`, `/library.json` — referenced by `apps/api` (Phase 2), `apps/web` (Phase 3) and the three compiled packages.
 
@@ -560,10 +566,12 @@ git commit -m "chore(config): add shared TypeScript configs"
 Spec: §4.1, §4.2, §4.3(5), §7.2. Three flat configs. The `no-restricted-imports` and `no-restricted-syntax` rules here are how several of the spec's prose rules become machine-enforced.
 
 **Files:**
+
 - Create: `packages/config-eslint/package.json`, `base.js`, `nest.js`, `next.js`, `rtl.js`
 - Create: `eslint.config.js` (repository root)
 
 **Interfaces:**
+
 - Consumes: `@ds/config-typescript` (Task 3) for the type-aware parser project service.
 - Produces: `@ds/config-eslint/base`, `/nest`, `/next` — consumed by `apps/api`, `apps/web` and the packages.
 
@@ -666,8 +674,7 @@ The `no-restricted-syntax` selector is how §7.2's "logical utilities only" rule
 // @ts-check
 import base from './base.js'
 
-const PHYSICAL_TAILWIND =
-  String.raw`/(^|\s)-?(ml|mr|pl|pr|left|right|border-l|border-r|rounded-l|rounded-r)-|(^|\s)text-(left|right)(\s|$)/`
+const PHYSICAL_TAILWIND = String.raw`/(^|\s)-?(ml|mr|pl|pr|left|right|border-l|border-r|rounded-l|rounded-r)-|(^|\s)text-(left|right)(\s|$)/`
 
 export default [
   ...base,
@@ -742,7 +749,7 @@ Run: `pnpm lint`
 
 Expected: exit 0, no errors.
 
-> **`eslint-plugin-boundaries` is installed but not configured here.** §4.3(5) uses it to enforce module boundaries *inside* `apps/api` and `apps/web`, neither of which exists yet; its rules are written in Phases 2 and 3 alongside `apps/api/.dependency-cruiser.cjs`. Declaring the dependency now keeps the catalog pin in one place.
+> **`eslint-plugin-boundaries` is installed but not configured here.** §4.3(5) uses it to enforce module boundaries _inside_ `apps/api` and `apps/web`, neither of which exists yet; its rules are written in Phases 2 and 3 alongside `apps/api/.dependency-cruiser.cjs`. Declaring the dependency now keeps the catalog pin in one place.
 
 - [ ] **Step 8: Commit**
 
@@ -758,9 +765,11 @@ git commit -m "chore(config): add shared ESLint flat configs"
 Spec: §4.2, §9.4(1). Formatting is a PostToolUse hook and a pre-commit hook, so it has to be deterministic and fast.
 
 **Files:**
+
 - Create: `prettier.config.mjs`, `.prettierignore`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `pnpm format` / `pnpm format:check`, used by the lefthook `pre-commit` hook (Task 7) and the `.claude/hooks/format-and-lint.sh` hook (Task 14).
 
@@ -814,9 +823,11 @@ git commit -m "chore: add prettier configuration"
 Spec: §13.4, §16 DoD 7. Layers 1 and 2 (Claude Code settings, hooks) can be bypassed; this one runs in CI and cannot. It checks the **author** only, never the committer, because squash merges are committed by `GitHub <noreply@github.com>`.
 
 **Files:**
+
 - Create: `scripts/audit-authors.sh`, `scripts/audit-authors.allowed`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `pnpm audit:authors` (exit 0 clean / exit 1 with the offending commits), used by the lefthook `pre-push` hook (Task 7) and the CI `authors` job (Task 13).
 
@@ -975,15 +986,17 @@ git commit -m "chore: add author audit script"
 Spec: §9.4(2)(3), §13.3. Layer 2 of attribution enforcement plus conventional-commit titles.
 
 **Files:**
+
 - Create: `commitlint.config.mjs`, `scripts/check-commit-msg.sh`, `lefthook.yml`
 
 **Interfaces:**
+
 - Consumes: `pnpm audit:authors` (Task 6), `prettier` (Task 5), `eslint` (Task 4).
 - Produces: installed git hooks — `pre-commit`, `commit-msg`, `pre-push`.
 
 - [ ] **Step 1: Write the failing test**
 
-`scripts/test-check-commit-msg.sh`. This covers Review Focus item 5 — the guard must reject a message that merely *mentions* the pattern (it is blunt by design), survive multi-line UTF-8, and not crash on an empty file.
+`scripts/test-check-commit-msg.sh`. This covers Review Focus item 5 — the guard must reject a message that merely _mentions_ the pattern (it is blunt by design), survive multi-line UTF-8, and not crash on an empty file.
 
 ```bash
 #!/usr/bin/env bash
@@ -1077,11 +1090,11 @@ pre-commit:
   parallel: true
   jobs:
     - name: prettier
-      glob: "*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}"
+      glob: '*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}'
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
     - name: eslint
-      glob: "*.{ts,tsx}"
+      glob: '*.{ts,tsx}'
       run: pnpm exec eslint --fix {staged_files}
       stage_fixed: true
 
@@ -1126,9 +1139,11 @@ git commit -m "chore: add commitlint, AI-trailer guard and git hooks"
 Spec: §4.1, §5.4, §12.3, §12.4. `north-star.md` is the only always-loaded document, so it carries the invariants that every future spec is checked against.
 
 **Files:**
+
 - Create: `docs/architecture/north-star.md`, `docs/glossary.md`, `docs/regulatory.md`, `docs/decisions/0000-template.md`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `docs/architecture/north-star.md`, imported by `CLAUDE.md` (Task 11); `docs/decisions/0000-template.md`, used by the `adr` skill (Task 13) and by Task 9.
 
@@ -1217,9 +1232,11 @@ git commit -m "docs: add north star, glossary, regulatory notes and ADR template
 Spec: §12.4. Sixteen of the seventeen ADRs can be written now; **0001 is deliberately left for Phase 2** because it records the NestJS 12 spike outcome (§5.1), which has not happened.
 
 **Files:**
+
 - Create: `docs/decisions/0002-*.md` … `0017-*.md` (16 files)
 
 **Interfaces:**
+
 - Consumes: `docs/decisions/0000-template.md` (Task 8).
 - Produces: the ADR set that `check-docs.sh` (Task 14) validates and that `north-star.md` links to.
 
@@ -1227,20 +1244,20 @@ Spec: §12.4. Sixteen of the seventeen ADRs can be written now; **0001 is delibe
 
 One file each, following the template exactly, titled as §12.4's table names them:
 
-| File | Title |
-|---|---|
-| `0002-drizzle-over-prisma.md` | Drizzle ORM over Prisma / MikroORM |
-| `0003-pnpm-turborepo.md` | pnpm workspaces + Turborepo |
-| `0004-postgres-16-redis-72.md` | PostgreSQL 16 and Redis 7.2 (Liara ceilings; UUIDv7 in application code) |
-| `0005-zod-first-contracts.md` | Zod-first contracts → OpenAPI → openapi-fetch client |
-| `0006-cache-components.md` | Next.js Cache Components from day one; Next server is the only API caller |
-| `0007-persian-only-rtl.md` | Persian-only, RTL-only storefront; Vazirmatn; logical CSS only |
-| `0008-money-irr-minor-units.md` | Money as IRR minor units with a configurable display unit |
-| `0009-outbox-before-queue.md` | Transactional outbox before any queue; BullMQ deferred |
+| File                               | Title                                                                       |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| `0002-drizzle-over-prisma.md`      | Drizzle ORM over Prisma / MikroORM                                          |
+| `0003-pnpm-turborepo.md`           | pnpm workspaces + Turborepo                                                 |
+| `0004-postgres-16-redis-72.md`     | PostgreSQL 16 and Redis 7.2 (Liara ceilings; UUIDv7 in application code)    |
+| `0005-zod-first-contracts.md`      | Zod-first contracts → OpenAPI → openapi-fetch client                        |
+| `0006-cache-components.md`         | Next.js Cache Components from day one; Next server is the only API caller   |
+| `0007-persian-only-rtl.md`         | Persian-only, RTL-only storefront; Vazirmatn; logical CSS only              |
+| `0008-money-irr-minor-units.md`    | Money as IRR minor units with a configurable display unit                   |
+| `0009-outbox-before-queue.md`      | Transactional outbox before any queue; BullMQ deferred                      |
 | `0010-hosting-liara-arvancloud.md` | Hosting on Liara + ArvanCloud; API not publicly exposed; Liara-built images |
-| `0011-no-online-payment.md` | No online payment at launch; WhatsApp handoff seam in checkout |
-| `0012-human-only-attribution.md` | Human-only git attribution (plus Renovate) and its enforcement |
-| `0013-public-repository.md` | Public repository with rulesets on `main` |
+| `0011-no-online-payment.md`        | No online payment at launch; WhatsApp handoff seam in checkout              |
+| `0012-human-only-attribution.md`   | Human-only git attribution (plus Renovate) and its enforcement              |
+| `0013-public-repository.md`        | Public repository with rulesets on `main`                                   |
 
 For each, **Considered Options** must name the alternatives the spec actually rejected — 0002 lists Prisma and MikroORM; 0010 lists ArvanCloud PaaS and a self-managed Iranian VPS with Coolify/Dokploy (§11.1's exit path); 0009 names BullMQ. An ADR with one option is a note, not a decision.
 
@@ -1288,9 +1305,11 @@ git commit -m "docs: add architecture decision records 0002-0017"
 Spec: §9.1, §11.4. Three documents. `go-live.md` and `first-deploy.md` are Phase 4's script, written now because the spec's ordering constraints are fresh and easy to get wrong later.
 
 **Files:**
+
 - Create: `docs/runbooks/iran-mirrors.md`, `docs/runbooks/go-live.md`, `docs/runbooks/first-deploy.md`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: documents referenced by `north-star.md` and by §11.4; `first-deploy.md` is the checklist Phase 4 executes.
 
@@ -1340,9 +1359,11 @@ git commit -m "docs: add iran-mirrors, go-live and first-deploy runbooks"
 Spec: §12.1, §12.2 (last bullet), §16 DoD 6. `CLAUDE.md` must stay **under 150 lines** — `check-docs.sh` enforces it in Task 14. Brevity is the point: a long instruction file is a file agents skim.
 
 **Files:**
+
 - Create: `CLAUDE.md`, `AGENTS.md`, `README.md`, `.mcp.json`
 
 **Interfaces:**
+
 - Consumes: `docs/architecture/north-star.md` (Task 8), imported by `CLAUDE.md`.
 - Produces: the always-loaded instruction set.
 
@@ -1417,9 +1438,11 @@ git commit -m "docs: add instruction files and MCP configuration"
 Spec: §12.1. Nine path-scoped rule files, each with `paths:` frontmatter so it loads only when a matching file is touched. Contents are enumerated in §12.1 — transcribe them rather than paraphrasing.
 
 **Files:**
+
 - Create: `.claude/rules/{api,web,contracts,db,persian,security,testing,generated,docs}.md`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: the rule set `check-docs.sh` (Task 14) checks for existence.
 
@@ -1430,26 +1453,27 @@ Format:
 ```markdown
 ---
 paths:
-  - "apps/api/**"
+  - 'apps/api/**'
 ---
 
 # API rules
+
 ...
 ```
 
 Path globs and minimum contents, exactly as §12.1 specifies:
 
-| File | `paths:` | Must contain |
-|---|---|---|
-| `api.md` | `apps/api/**` | Fastify adapter options; no `ValidationPipe`; no global prefix or URI versioning; no `MiddlewareConsumer` (use guards/interceptors/`fastify.addHook`); terminus `HealthIndicatorService` not the deprecated base class; no `@nestjs/event-emitter`; Vitest + `app.inject()` — no supertest, no Jest globals |
-| `web.md` | `apps/web/**` | No route segment configs (`dynamic`/`revalidate`/`fetchCache`); `cacheLife`/`cacheTag`/`io` from `next/cache`, with `io()` before uncached work inside page islands; `connection` from `next/server` only in route handlers and `sitemap.ts`; `params`/`searchParams` awaited inside `<Suspense>`; `publicApi` vs `requestApi()`; `next/font/local` only; `eslint .` never `next lint` |
-| `contracts.md` | `packages/contracts/**` | Zod 4 top-level forms; results expose `issues`, never `errors`; **Zod 4.6: `z.iso.datetime()` requires seconds, and `.min`/`.max`/`.length` count code points** |
-| `db.md` | `**/infrastructure/schema.ts`, `apps/api/drizzle/**`, `apps/api/src/infra/**/schema.ts` | camelCase keys with `casing` deriving snake_case names; `drizzle-kit generate` plus committed SQL; **never `push`**; the §6.3 convention table |
-| `persian.md` | `packages/persian/**`, `packages/contracts/**`, `apps/web/**` | Normalization happens on write in the domain entity; formatting happens on the server only; `TEHRAN_TZ` is the single timezone constant |
-| `security.md` | (unscoped) | Env files are never read or committed; no secret in `.env.example`; stack traces never leave the process in production |
-| `testing.md` | `**/*.test.ts`, `**/*.test.tsx`, `**/e2e/**` | Unit vs integration split; truncation isolation, not transaction rollback; call `runOnce()` directly in outbox tests; **Vitest 5: `clearMocks` explicit, `vi.mock`/`vi.hoisted` at module top level only, one config per workspace** |
-| `generated.md` | `**/src/generated/**`, `**/openapi.json` | Never edit by hand; regenerate with `pnpm openapi:generate` |
-| `docs.md` | `docs/**` | Introducing a term or a decision means updating the glossary or writing an ADR |
+| File           | `paths:`                                                                                | Must contain                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.md`       | `apps/api/**`                                                                           | Fastify adapter options; no `ValidationPipe`; no global prefix or URI versioning; no `MiddlewareConsumer` (use guards/interceptors/`fastify.addHook`); terminus `HealthIndicatorService` not the deprecated base class; no `@nestjs/event-emitter`; Vitest + `app.inject()` — no supertest, no Jest globals                                                                            |
+| `web.md`       | `apps/web/**`                                                                           | No route segment configs (`dynamic`/`revalidate`/`fetchCache`); `cacheLife`/`cacheTag`/`io` from `next/cache`, with `io()` before uncached work inside page islands; `connection` from `next/server` only in route handlers and `sitemap.ts`; `params`/`searchParams` awaited inside `<Suspense>`; `publicApi` vs `requestApi()`; `next/font/local` only; `eslint .` never `next lint` |
+| `contracts.md` | `packages/contracts/**`                                                                 | Zod 4 top-level forms; results expose `issues`, never `errors`; **Zod 4.6: `z.iso.datetime()` requires seconds, and `.min`/`.max`/`.length` count code points**                                                                                                                                                                                                                        |
+| `db.md`        | `**/infrastructure/schema.ts`, `apps/api/drizzle/**`, `apps/api/src/infra/**/schema.ts` | camelCase keys with `casing` deriving snake_case names; `drizzle-kit generate` plus committed SQL; **never `push`**; the §6.3 convention table                                                                                                                                                                                                                                         |
+| `persian.md`   | `packages/persian/**`, `packages/contracts/**`, `apps/web/**`                           | Normalization happens on write in the domain entity; formatting happens on the server only; `TEHRAN_TZ` is the single timezone constant                                                                                                                                                                                                                                                |
+| `security.md`  | (unscoped)                                                                              | Env files are never read or committed; no secret in `.env.example`; stack traces never leave the process in production                                                                                                                                                                                                                                                                 |
+| `testing.md`   | `**/*.test.ts`, `**/*.test.tsx`, `**/e2e/**`                                            | Unit vs integration split; truncation isolation, not transaction rollback; call `runOnce()` directly in outbox tests; **Vitest 5: `clearMocks` explicit, `vi.mock`/`vi.hoisted` at module top level only, one config per workspace**                                                                                                                                                   |
+| `generated.md` | `**/src/generated/**`, `**/openapi.json`                                                | Never edit by hand; regenerate with `pnpm openapi:generate`                                                                                                                                                                                                                                                                                                                            |
+| `docs.md`      | `docs/**`                                                                               | Introducing a term or a decision means updating the glossary or writing an ADR                                                                                                                                                                                                                                                                                                         |
 
 - [ ] **Step 2: Verify frontmatter parses and every file has a `paths:` key**
 
@@ -1476,10 +1500,12 @@ git commit -m "chore: add path-scoped agent rules"
 Spec: §12.2, §13.4(1)(2), §16 DoD 6. This is the agent-facing enforcement layer.
 
 **Files:**
+
 - Create: `.claude/settings.json`, `.claude/hooks/{no-ai-trailers,format-and-lint,verify}.sh`, `.claude/agents/reviewer.md`, `.claude/skills/{adr,new-api-module,new-web-route,verify}/SKILL.md`
 - Modify: `package.json` (add a `prepare` script — see Step 1)
 
 **Interfaces:**
+
 - Consumes: `scripts/check-commit-msg.sh` logic (Task 7), `pnpm check` (Task 1).
 - Produces: hooks that fire on every Edit/Write, Bash git-commit and Stop.
 
@@ -1506,43 +1532,71 @@ Transcribe §12.2's three permission lists exactly. `defaultMode` is `acceptEdit
   "permissions": {
     "defaultMode": "acceptEdits",
     "allow": [
-      "Bash(pnpm check*)", "Bash(pnpm check:*)", "Bash(pnpm lint*)",
-      "Bash(pnpm typecheck*)", "Bash(pnpm test*)", "Bash(pnpm build*)",
-      "Bash(pnpm dev*)", "Bash(pnpm db:*)", "Bash(pnpm openapi:generate*)",
-      "Bash(pnpm format*)", "Bash(pnpm e2e*)", "Bash(pnpm boundaries*)",
-      "Bash(pnpm install)", "Bash(pnpm audit:authors*)",
-      "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)",
-      "Bash(git add *)", "Bash(git commit *)",
-      "Bash(gh pr view *)", "Bash(gh pr create *)",
-      "WebFetch(domain:docs.nestjs.com)", "WebFetch(domain:nextjs.org)",
+      "Bash(pnpm check*)",
+      "Bash(pnpm check:*)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm typecheck*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm build*)",
+      "Bash(pnpm dev*)",
+      "Bash(pnpm db:*)",
+      "Bash(pnpm openapi:generate*)",
+      "Bash(pnpm format*)",
+      "Bash(pnpm e2e*)",
+      "Bash(pnpm boundaries*)",
+      "Bash(pnpm install)",
+      "Bash(pnpm audit:authors*)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr create *)",
+      "WebFetch(domain:docs.nestjs.com)",
+      "WebFetch(domain:nextjs.org)",
       "WebFetch(domain:orm.drizzle.team)"
     ],
     "ask": [
-      "Bash(git push *)", "Bash(pnpm add *)", "Bash(pnpm install *)",
-      "Bash(pnpm remove *)", "Bash(pnpm update *)", "Bash(pnpm --filter *)",
+      "Bash(git push *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm remove *)",
+      "Bash(pnpm update *)",
+      "Bash(pnpm --filter *)",
       "Bash(pnpm dlx *)"
     ],
     "deny": [
-      "Read(.env)", "Read(.env.local)", "Read(.env.*.local)",
-      "Read(./**/dist/**)", "Read(./**/.next/**)", "Read(./**/coverage/**)",
+      "Read(.env)",
+      "Read(.env.local)",
+      "Read(.env.*.local)",
+      "Read(./**/dist/**)",
+      "Read(./**/.next/**)",
+      "Read(./**/coverage/**)",
       "Edit(./pnpm-lock.yaml)",
-      "Bash(pnpm exec *)", "Bash(pnpm publish *)",
-      "Bash(git commit *--no-verify*)", "Bash(git commit *-n *)",
-      "Bash(curl *)", "Bash(wget *)", "Bash(rm -rf *)"
+      "Bash(pnpm exec *)",
+      "Bash(pnpm publish *)",
+      "Bash(git commit *--no-verify*)",
+      "Bash(git commit *-n *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(rm -rf *)"
     ]
   },
   "hooks": {
     "PreToolUse": [
-      { "matcher": "Bash", "hooks": [
-        { "type": "command", "command": "bash .claude/hooks/no-ai-trailers.sh" } ] }
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/no-ai-trailers.sh" }]
+      }
     ],
     "PostToolUse": [
-      { "matcher": "Edit|Write", "hooks": [
-        { "type": "command", "command": "bash .claude/hooks/format-and-lint.sh" } ] }
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/format-and-lint.sh" }]
+      }
     ],
-    "Stop": [
-      { "hooks": [ { "type": "command", "command": "bash .claude/hooks/verify.sh" } ] }
-    ]
+    "Stop": [{ "hooks": [{ "type": "command", "command": "bash .claude/hooks/verify.sh" }] }]
   }
 }
 ```
@@ -1598,12 +1652,12 @@ Expected: `exit: 2` then `exit: 0`.
 
 Skills, each in `.claude/skills/<name>/SKILL.md` with `name` and `description` frontmatter. The three with side effects set `disable-model-invocation: true` so they only run when asked by name:
 
-| Skill | Does | `disable-model-invocation` |
-|---|---|---|
-| `adr` | Creates `docs/decisions/NNNN-title.md` from `0000-template.md`, picking the next free number | `true` |
-| `new-api-module` | Copies the `catalog` module anatomy (§5.3) into a new context with names replaced | `true` |
-| `new-web-route` | Scaffolds a route in the §7.5 shape — uncached page, `<Suspense>`, `await io()`, a `'use cache'` data function | `true` |
-| `verify` | Runs `pnpm check` and summarizes the result | — |
+| Skill            | Does                                                                                                           | `disable-model-invocation` |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `adr`            | Creates `docs/decisions/NNNN-title.md` from `0000-template.md`, picking the next free number                   | `true`                     |
+| `new-api-module` | Copies the `catalog` module anatomy (§5.3) into a new context with names replaced                              | `true`                     |
+| `new-web-route`  | Scaffolds a route in the §7.5 shape — uncached page, `<Suspense>`, `await io()`, a `'use cache'` data function | `true`                     |
+| `verify`         | Runs `pnpm check` and summarizes the result                                                                    | —                          |
 
 `new-api-module` cannot be fully verified until Phase 2 gives it a `catalog` module to copy. Note that in the skill body; DoD 6's check of it belongs to Phase 3.
 
@@ -1621,9 +1675,11 @@ git commit -m "chore: add agent settings, hooks, reviewer and skills"
 Spec: §16 DoD 6, §9.3. Written **after** Tasks 8–13 because it validates what they produce. It is part of `pnpm check`, so from here on a missing document fails the build.
 
 **Files:**
+
 - Create: `scripts/check-docs.sh`, `scripts/check-docs.manifest`
 
 **Interfaces:**
+
 - Consumes: every file created in Tasks 8–13.
 - Produces: `pnpm check:docs`, called by `pnpm check` and `pnpm check:affected` (Task 1) and therefore by CI (Task 15).
 
@@ -1821,9 +1877,11 @@ git commit -m "chore: add docs and configuration verification script"
 Spec: §9.5, §10.1, §13.3. Only the three jobs that have something to check exist now. `openapi`, `e2e` and `docker` arrive with their subjects in Phases 2–4 — adding them early would mean either a red `main` or a required check that never reports.
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/renovate.json`
 
 **Interfaces:**
+
 - Consumes: `pnpm check:affected` (Task 1), `pnpm audit:authors` (Task 6).
 - Produces: the status checks `check`, `authors`, `secrets` that Task 16 marks required.
 
@@ -1838,7 +1896,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "0 3 * * 1"
+    - cron: '0 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -1876,7 +1934,7 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: gitleaks/gitleaks-action@v2
         env:
-          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
 ```
 
 Two notes. `pnpm/action-setup` installs dependencies by default — there is no second `pnpm install`, which is why the explicit `--frozen-lockfile` step is the only install. Every action here must be **SHA-pinned by Renovate** before the first push is considered done; the tags above are placeholders for readability only, and `helpers:pinGitHubActionDigests` in Step 4 is what converts them.
@@ -1922,16 +1980,35 @@ The five-item checklist from §13.3: spec/plan linked · tests added · `pnpm ch
   "minimumReleaseAge": "3 days",
   "packageRules": [
     { "groupName": "nestjs", "matchPackageNames": ["@nestjs/**", "@nest-lab/**"] },
-    { "groupName": "next", "matchPackageNames": ["next", "react", "react-dom", "eslint-config-next"] },
-    { "groupName": "eslint", "matchPackageNames": ["eslint", "typescript-eslint", "eslint-plugin-**"] },
+    {
+      "groupName": "next",
+      "matchPackageNames": ["next", "react", "react-dom", "eslint-config-next"]
+    },
+    {
+      "groupName": "eslint",
+      "matchPackageNames": ["eslint", "typescript-eslint", "eslint-plugin-**"]
+    },
     { "groupName": "drizzle", "matchPackageNames": ["drizzle-orm", "drizzle-kit"] },
-    { "matchDepTypes": ["devDependencies"], "matchUpdateTypes": ["patch", "minor"], "automerge": true },
-    { "matchPackageNames": ["typescript"], "allowedVersions": "<6.1.0",
-      "description": "Spec §3 — @nestjs/cli and typescript-eslint both reject TS 7. Re-evaluate no earlier than 2026-11-24." },
-    { "matchPackageNames": ["drizzle-orm", "drizzle-kit"], "allowedVersions": "<1.0.0",
-      "description": "Spec D6 — Drizzle 1.0 is still pre-release." },
-    { "matchPackageNames": ["ioredis"], "allowedVersions": "<6.0.0",
-      "description": "Spec §4.2 — ioredis 6 defaults to RESP3." }
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.1.0",
+      "description": "Spec §3 — @nestjs/cli and typescript-eslint both reject TS 7. Re-evaluate no earlier than 2026-11-24."
+    },
+    {
+      "matchPackageNames": ["drizzle-orm", "drizzle-kit"],
+      "allowedVersions": "<1.0.0",
+      "description": "Spec D6 — Drizzle 1.0 is still pre-release."
+    },
+    {
+      "matchPackageNames": ["ioredis"],
+      "allowedVersions": "<6.0.0",
+      "description": "Spec §4.2 — ioredis 6 defaults to RESP3."
+    }
   ]
 }
 ```
@@ -1965,6 +2042,7 @@ Spec: §13.1, §13.3, §16 DoD 7. **Saman must be present for this task** — it
 **Files:** none created. This is a git and GitHub operation.
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 1–15.
 - Produces: `github.com/samanhoseinpour/dubai-supplement`, public, with `main` protected.
 
@@ -2037,14 +2115,14 @@ Update `docs/decisions/0013-public-repository.md`'s **Decision Outcome** with th
 
 ## Phase 1 exit criteria
 
-| # | Criterion | Spec |
-|---|---|---|
-| 1 | `pnpm install` succeeds from a clean clone; `pnpm install --frozen-lockfile` is a no-op | §4.2 |
-| 2 | `pnpm check` exits 0 and ends with `check-docs: OK` | §4.4, §16.6 |
-| 3 | `pnpm audit:authors` reports one allowed author and zero AI trailers | §16.7 |
-| 4 | A local commit containing `Co-Authored-By:` is rejected by the `commit-msg` hook | §16.6 |
-| 5 | Repository is public at `github.com/samanhoseinpour/dubai-supplement`, `main` protected with `authors` + `secrets` | §16.7 |
-| 6 | CI is green on `main` | §16.2 (partial) |
-| 7 | ADRs 0002–0017 exist and each carries three MADR headings; **0001 is deliberately absent** | §12.4, §16.8 |
+| #   | Criterion                                                                                                          | Spec            |
+| --- | ------------------------------------------------------------------------------------------------------------------ | --------------- |
+| 1   | `pnpm install` succeeds from a clean clone; `pnpm install --frozen-lockfile` is a no-op                            | §4.2            |
+| 2   | `pnpm check` exits 0 and ends with `check-docs: OK`                                                                | §4.4, §16.6     |
+| 3   | `pnpm audit:authors` reports one allowed author and zero AI trailers                                               | §16.7           |
+| 4   | A local commit containing `Co-Authored-By:` is rejected by the `commit-msg` hook                                   | §16.6           |
+| 5   | Repository is public at `github.com/samanhoseinpour/dubai-supplement`, `main` protected with `authors` + `secrets` | §16.7           |
+| 6   | CI is green on `main`                                                                                              | §16.2 (partial) |
+| 7   | ADRs 0002–0017 exist and each carries three MADR headings; **0001 is deliberately absent**                         | §12.4, §16.8    |
 
 **Not** in Phase 1: any `apps/` code, `infra/`, the three compiled packages, the NestJS 12 spike, Docker images, Liara. Phase 2 begins with the spike (§5.1), whose prerequisites — the root workspace, `@ds/config-typescript`, `@ds/config-eslint`, and a passing `pnpm install` — are exactly what Tasks 1–4 deliver.

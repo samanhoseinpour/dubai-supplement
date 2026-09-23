@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+dist
+.next
+coverage
+.turbo
+**/src/generated
+**/openapi.json

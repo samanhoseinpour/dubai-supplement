@@ -5,8 +5,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "verbatimModuleSyntax": false,
-    "outDir": "dist",
-    "rootDir": "src",
     "types": ["node"]
   }
 }

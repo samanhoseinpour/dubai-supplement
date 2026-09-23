@@ -6,6 +6,10 @@ export default [
   {
     files: ['**/*.ts'],
     rules: {
+      // A Nest module is an empty decorated class by design — the decorator
+      // carries the wiring. The rule's own escape hatch is the right fit:
+      // a bare empty class is still an error.
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       'no-restricted-imports': [
         'error',
         {

@@ -2024,7 +2024,7 @@ git commit -m "feat(api): wire helmet, cookies, conditional CORS and the Redis t
 
 - Consumes: `AppConfig` (`openapiUiEnabled`); `ProblemDetailsSchema` from `@ds/contracts`.
 - Produces:
-  - `ApiZodResponse(status: number, schema: z.ZodTypeAny): MethodDecorator`
+  - `ApiZodResponse(status: number, schema: z.ZodType): MethodDecorator`
   - `buildDocument(app: INestApplication): OpenAPIObject`
   - `apps/api/openapi.json` (committed)
 
@@ -2119,7 +2119,7 @@ import type { z } from 'zod'
  * property checking. v12's `standardSchema` field takes the Zod schema
  * directly and lets Nest do the conversion (§5.5, corrected 2026-09-23).
  */
-export function ApiZodResponse(status: number, schema: z.ZodTypeAny): MethodDecorator {
+export function ApiZodResponse(status: number, schema: z.ZodType): MethodDecorator {
   return ApiResponse({ status, standardSchema: schema })
 }
 ```

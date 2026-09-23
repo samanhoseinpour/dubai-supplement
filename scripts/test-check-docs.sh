@@ -34,8 +34,11 @@ if run; then bad "over-long CLAUDE.md caught"; else ok "over-long CLAUDE.md caug
 mv "$ROOT/CLAUDE.md.bak" "$ROOT/CLAUDE.md"
 
 cp "$ROOT/.mcp.json" "$ROOT/.mcp.json.bak"
+# Built at runtime on purpose: a key-shaped literal committed to a public
+# repository would trip gitleaks and is bad hygiene even when it is fake.
+fake_key="ctx7sk-$(printf 'a%.0s' $(seq 1 20))"
 # shellcheck disable=SC2016  # matching the literal ${...} text in the file
-sed 's|\${CONTEXT7_API_KEY}|ctx7sk-real-looking-key-000000|' "$ROOT/.mcp.json.bak" > "$ROOT/.mcp.json"
+sed "s|\${CONTEXT7_API_KEY}|$fake_key|" "$ROOT/.mcp.json.bak" > "$ROOT/.mcp.json"
 if run; then bad "literal MCP key caught"; else ok "literal MCP key caught"; fi
 mv "$ROOT/.mcp.json.bak" "$ROOT/.mcp.json"
 

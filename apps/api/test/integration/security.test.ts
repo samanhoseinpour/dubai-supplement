@@ -228,6 +228,18 @@ describe('security wiring', () => {
       expect(res.headers['access-control-allow-origin']).toBe('https://shop.example.ir')
       expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PATCH, DELETE, OPTIONS')
     })
+
+    // The preflight is still answered — the refusal is the missing origin
+    // header, which makes the browser drop the actual request.
+    it('answers a preflight from an unlisted origin without an allowed origin', async () => {
+      const res = await ctx.app.inject({
+        method: 'OPTIONS',
+        url: '/ping',
+        headers: { origin: 'https://evil.example', 'access-control-request-method': 'PATCH' },
+      })
+      expect(res.statusCode).toBe(204)
+      expect(res.headers['access-control-allow-origin']).toBeUndefined()
+    })
   })
 
   describe('throttling through Redis', () => {
@@ -277,6 +289,11 @@ describe('security wiring', () => {
       })
       // ThrottlerException's own text, which Nest's default body would carry.
       expect(res.payload).not.toContain('Too Many Requests')
+      // What a client backs off with: seconds until the block expires, set by
+      // the guard before it throws and kept by the filter.
+      const retryAfter = Number(res.headers['retry-after'])
+      expect(retryAfter).toBeGreaterThan(0)
+      expect(retryAfter).toBeLessThanOrEqual(THROTTLE_TTL_MS / 1000)
     })
 
     // Spec §5.5: X-Forwarded-For from an untrusted hop is ignored. The peer is

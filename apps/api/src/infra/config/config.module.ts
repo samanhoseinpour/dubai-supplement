@@ -10,15 +10,24 @@ import { type Env, EnvSchema } from './env.schema.js'
 // silently collapse it to []. `forRoot()` runs `validate` synchronously while
 // this class is decorated, so `validated` is set before any factory runs.
 let validated: Env | undefined
+let rejected: unknown
 
 /**
  * The environment `forRoot` validated while this module was decorated — the
  * object the AppConfig provider is built from — for the one consumer that
  * needs it before the container exists: the Fastify adapter's options in
- * main.ts, fixed at instance creation. Same fallback as the provider.
+ * the app factory, fixed at instance creation. When `validate` threw, this
+ * throws too, with the Zod error as its cause: `forRoot`'s rejection is
+ * only surfaced once Nest awaits it, and nothing may be built on a second
+ * parse of process.env, whose schema defaults the operator never asked for.
  */
 export function validatedEnv(): Env {
-  return validated ?? EnvSchema.parse(process.env)
+  if (validated === undefined) {
+    throw new Error('The environment failed validation; nothing can be built from it.', {
+      cause: rejected,
+    })
+  }
+  return validated
 }
 
 @Global()
@@ -29,7 +38,12 @@ export function validatedEnv(): Env {
       // Zod's own message is more useful than Nest's wrapper, and a boot
       // failure must name the offending key.
       validate: (raw) => {
-        validated = EnvSchema.parse(raw)
+        try {
+          validated = EnvSchema.parse(raw)
+        } catch (error) {
+          rejected = error
+          throw error
+        }
         return validated
       },
     }),
@@ -37,10 +51,9 @@ export function validatedEnv(): Env {
   providers: [
     {
       provide: AppConfig,
-      // The fallback cannot run today — a failed `validate` rejects the module
-      // before any provider is built — and only keeps the provider whole if
-      // this module is ever constructed without `forRoot`.
-      useFactory: () => new AppConfig(validated ?? EnvSchema.parse(process.env)),
+      // A failed `validate` rejects the module before any provider is built,
+      // so this factory only ever runs on the validated snapshot.
+      useFactory: () => new AppConfig(validatedEnv()),
     },
   ],
   exports: [AppConfig],

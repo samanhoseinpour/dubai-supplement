@@ -94,6 +94,32 @@ describe('boot-time env validation', () => {
     ])
   })
 
+  // The near-reachable case: `validate` threw, so `validated` was never set
+  // and forRoot's promise will reject once Nest awaits it. main.ts reads the
+  // env before that, and must not be handed a second parse of process.env
+  // with schema defaults the operator never asked for.
+  it('refuses to hand main.ts an environment that failed validation', async () => {
+    vi.stubEnv('DATABASE_URL', undefined)
+    const fresh = await importConfigWith(undefined)
+    let thrown: unknown
+    try {
+      fresh.validatedEnv()
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBeInstanceOf(Error)
+    expect((thrown as Error).message).toMatch(/failed validation/u)
+    // The Zod error naming the key rides along, so the operator still sees it.
+    expect((thrown as Error).cause).toMatchObject({
+      message: expect.stringContaining('DATABASE_URL') as string,
+    })
+    // ...and it is the same error Nest surfaces afterwards. Awaiting it here
+    // also keeps forRoot's rejection handled, as the first test does.
+    await expect(
+      Test.createTestingModule({ imports: [fresh.ConfigModule] }).compile(),
+    ).rejects.toThrow(/DATABASE_URL/u)
+  })
+
   it('exposes AppConfig through AppModule, built from the validated environment', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     try {

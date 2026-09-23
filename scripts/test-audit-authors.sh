@@ -23,25 +23,25 @@ make_repo() {
 run() { bash scripts/audit-authors.sh >/dev/null 2>&1; }
 
 make_repo; git commit -q -m "chore: clean"
-run && ok "clean commit accepted" || bad "clean commit accepted"
+if run; then ok "clean commit accepted"; else bad "clean commit accepted"; fi
 
 make_repo
 git -c user.name=Someone -c user.email=someone@example.com commit -q -m "chore: other author"
-run && bad "unknown author rejected" || ok "unknown author rejected"
+if run; then bad "unknown author rejected"; else ok "unknown author rejected"; fi
 
 make_repo
 git commit -q -m "chore: sneaky" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-run && bad "co-author trailer rejected" || ok "co-author trailer rejected"
+if run; then bad "co-author trailer rejected"; else ok "co-author trailer rejected"; fi
 
 make_repo; git commit -q -m "chore: no remote"
-run && ok "works with no origin/main" || bad "works with no origin/main"
+if run; then ok "works with no origin/main"; else bad "works with no origin/main"; fi
 
 make_repo; git commit -q -m "chore: base"
 git checkout -q -b feat
 echo y > b.txt; git add -A; git commit -q -m "feat: x"
 git checkout -q -
 git merge -q --no-ff feat -m "Merge pull request #1" >/dev/null 2>&1
-run && ok "merge commit ignored" || bad "merge commit ignored"
+if run; then ok "merge commit ignored"; else bad "merge commit ignored"; fi
 
 echo
 echo "passed: $PASS   failed: $FAIL"

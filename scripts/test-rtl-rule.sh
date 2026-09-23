@@ -35,6 +35,7 @@ check() { # check <clean|flagged> <label> <source>
 check clean   "logical utilities"          'export const a = "ms-4 me-2 ps-1 pe-3 text-start"'
 check flagged "physical margin ml-"        'export const b = "ml-4"'
 check flagged "physical text-left"         'export const c = "text-left"'
+# shellcheck disable=SC2016  # the backticks are literal TypeScript, not a subshell
 check flagged "physical inside a template" 'export const d = `flex mr-2`'
 check flagged "negative physical -ml-"     'export const e = "-ml-2"'
 check flagged "border-l-"                  'export const f = "border-l-2"'

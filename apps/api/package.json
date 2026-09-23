@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ds/contracts": "workspace:*",
     "@nest-lab/throttler-storage-redis": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",

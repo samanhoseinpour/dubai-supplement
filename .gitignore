@@ -1,1 +1,15 @@
 .DS_Store
+node_modules/
+dist/
+.next/
+coverage/
+.turbo/
+*.tsbuildinfo
+**/.env
+**/.env.local
+**/.env.*.local
+.claude/settings.local.json
+playwright-report/
+test-results/
+.vitest/
+.superpowers/

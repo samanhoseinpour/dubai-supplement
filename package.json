@@ -1,0 +1,42 @@
+{
+  "name": "dubai-supplement",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "packageManager": "pnpm@12.5.1",
+  "devEngines": {
+    "runtime": { "name": "node", "version": "24.x", "onFail": "download" }
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint --output-logs=errors-only",
+    "typecheck": "turbo run typecheck --output-logs=errors-only",
+    "test": "turbo run test --output-logs=errors-only",
+    "test:integration": "turbo run test:integration --output-logs=errors-only",
+    "boundaries": "turbo run boundaries --output-logs=errors-only",
+    "e2e": "turbo run e2e --output-logs=errors-only",
+    "check": "turbo run lint typecheck test test:integration boundaries --output-logs=errors-only && sherif && pnpm check:docs",
+    "check:affected": "turbo run lint typecheck test test:integration boundaries --affected --output-logs=errors-only && sherif && pnpm check:docs",
+    "check:docs": "bash scripts/check-docs.sh",
+    "audit:authors": "bash scripts/audit-authors.sh",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose -f infra/compose.yaml up -d --wait",
+    "db:down": "docker compose -f infra/compose.yaml down",
+    "db:generate": "pnpm --filter api exec drizzle-kit generate",
+    "db:migrate": "pnpm --filter api exec tsx src/migrate.ts",
+    "db:seed": "turbo run seed --filter=api --output-logs=errors-only",
+    "openapi:generate": "turbo run generate --filter=@ds/api-client"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "eslint": "catalog:",
+    "lefthook": "catalog:",
+    "prettier": "catalog:",
+    "sherif": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}

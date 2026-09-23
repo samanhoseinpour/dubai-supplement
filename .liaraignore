@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+coverage
+docs
+.git
+.claude/settings.local.json
+**/.env
+**/.env.local
+**/.env.*.local

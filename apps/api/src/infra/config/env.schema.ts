@@ -71,7 +71,11 @@ const corsOrigins = z
   })
 
 export const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Required, no default: the logger reaches for pino-pretty — a devDependency
+  // — only in development, so a deploy that forgets NODE_ENV must fail here,
+  // naming the key, not inside a transport worker that cannot load the module.
+  // Vitest sets `test` in-process; `.env.example` carries `development`.
+  NODE_ENV: z.enum(['development', 'test', 'production']),
   PROCESS_ROLE: z.enum(['api', 'worker', 'all']).default('api'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EnvSchema } from './env.schema.js'
 
 const valid = {
+  NODE_ENV: 'development',
   DATABASE_URL: 'postgres://dubaisupp:dubaisupp@127.0.0.1:5432/dubaisupp',
   REDIS_URL: 'redis://127.0.0.1:6379/0',
   S3_ENDPOINT: 'http://127.0.0.1:9000',
@@ -11,8 +12,9 @@ const valid = {
 }
 
 describe('EnvSchema', () => {
-  it('boots from only the six required keys, defaulting the rest', () => {
+  it('boots from only the seven required keys, defaulting the rest', () => {
     const env = EnvSchema.parse(valid)
+    expect(env.NODE_ENV).toBe('development')
     expect(env.PROCESS_ROLE).toBe('api')
     expect(env.PORT).toBe(3001)
     expect(env.OUTBOX_POLL_MS).toBe(1000)
@@ -24,6 +26,14 @@ describe('EnvSchema', () => {
   it('refuses to boot when a required key is missing', () => {
     const { DATABASE_URL: _DATABASE_URL, ...withoutDb } = valid
     expect(() => EnvSchema.parse(withoutDb)).toThrow()
+  })
+
+  // A deploy that forgets NODE_ENV must fail here, naming the key — not later,
+  // inside a pino transport worker asking for a devDependency that production
+  // never installs. Defaulting to development is what made that reachable.
+  it('refuses to boot without NODE_ENV rather than assuming development', () => {
+    const { NODE_ENV: _NODE_ENV, ...withoutNodeEnv } = valid
+    expect(() => EnvSchema.parse(withoutNodeEnv)).toThrow(/NODE_ENV/u)
   })
 
   // Review Focus 3. A hop count is what the spec originally specified and

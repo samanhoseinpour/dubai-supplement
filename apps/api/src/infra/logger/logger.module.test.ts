@@ -11,6 +11,7 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const config = (over: Record<string, string> = {}) =>
   new AppConfig(
     EnvSchema.parse({
+      NODE_ENV: 'test',
       DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/d',
       REDIS_URL: 'redis://127.0.0.1:6379/0',
       S3_ENDPOINT: 'http://127.0.0.1:9000',

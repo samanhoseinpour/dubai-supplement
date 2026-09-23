@@ -43,10 +43,17 @@ jobs:
 
   secrets:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
         env:
+          # Required on pull_request events: the action reads the PR's commit
+          # range through the API. Without it the job errors immediately
+          # instead of scanning, which looks like a failure but scans nothing.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'

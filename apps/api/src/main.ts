@@ -3,7 +3,7 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Logger } from 'nestjs-pino'
 import { AppModule } from './app.module.js'
 import { AppConfig } from './infra/config/index.js'
-import { ProblemFilter } from './infra/http/problem.filter.js'
+import { ProblemFilter } from './infra/http/index.js'
 
 export async function createApp(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(

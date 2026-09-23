@@ -11,6 +11,16 @@ import { type Env, EnvSchema } from './env.schema.js'
 // this class is decorated, so `validated` is set before any factory runs.
 let validated: Env | undefined
 
+/**
+ * The environment `forRoot` validated while this module was decorated — the
+ * object the AppConfig provider is built from — for the one consumer that
+ * needs it before the container exists: the Fastify adapter's options in
+ * main.ts, fixed at instance creation. Same fallback as the provider.
+ */
+export function validatedEnv(): Env {
+  return validated ?? EnvSchema.parse(process.env)
+}
+
 @Global()
 @Module({
   imports: [

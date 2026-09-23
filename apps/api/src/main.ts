@@ -2,10 +2,13 @@ import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { Logger } from 'nestjs-pino'
 import { AppModule } from './app.module.js'
-import { AppConfig } from './infra/config/index.js'
-import { buildValidationPipe, ProblemFilter } from './infra/http/index.js'
+import { AppConfig, validatedEnv } from './infra/config/index.js'
+import { buildValidationPipe, ProblemFilter, registerSecurity } from './infra/http/index.js'
 
 export async function createApp(): Promise<NestFastifyApplication> {
+  // The adapter's options are fixed before the container exists, so this is
+  // built from the same validated snapshot the AppConfig provider is.
+  const config = new AppConfig(validatedEnv())
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
@@ -14,22 +17,24 @@ export async function createApp(): Promise<NestFastifyApplication> {
       // NOT a hop count. Fastify 5.12.5 fails a numeric trustProxy closed —
       // it returns `() => false`, trusting nothing, with no error. Must be a
       // CIDR list or one of proxy-addr's presets (loopback / linklocal /
-      // uniquelocal); Fastify splits a string on commas.
-      trustProxy: 'loopback,uniquelocal',
+      // uniquelocal); Fastify splits a string on commas. The env schema
+      // refuses everything else, so what arrives here is one of those.
+      trustProxy: config.trustProxy,
       bodyLimit: 1_048_576,
     }),
     { rawBody: true, bufferLogs: true },
   )
   app.useLogger(app.get(Logger))
+  await registerSecurity(app, config)
   app.useGlobalPipes(buildValidationPipe())
-  app.useGlobalFilters(new ProblemFilter(app.get(AppConfig).nodeEnv))
+  app.useGlobalFilters(new ProblemFilter(config.nodeEnv))
   app.enableShutdownHooks()
   return app
 }
 
 async function bootstrap(): Promise<void> {
   const app = await createApp()
-  await app.listen({ port: Number(process.env.PORT ?? 3001), host: '0.0.0.0' })
+  await app.listen({ port: app.get(AppConfig).port, host: '0.0.0.0' })
 }
 
 await bootstrap()

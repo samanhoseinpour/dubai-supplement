@@ -80,6 +80,20 @@ describe('boot-time env validation', () => {
     }
   })
 
+  // main.ts builds the adapter's options from this before the container
+  // exists. It has to be the validated snapshot, not a re-parse of
+  // process.env: a .env-supplied CORS_ORIGINS would read as [] there.
+  it('exposes the validated env to main.ts, arrays included', async () => {
+    vi.stubEnv('CORS_ORIGINS', undefined)
+    const fresh = await importConfigWith(
+      [...REQUIRED, 'CORS_ORIGINS=https://shop.example.ir,https://admin.example.ir', ''].join('\n'),
+    )
+    expect(fresh.validatedEnv().CORS_ORIGINS).toEqual([
+      'https://shop.example.ir',
+      'https://admin.example.ir',
+    ])
+  })
+
   it('exposes AppConfig through AppModule, built from the validated environment', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
     try {

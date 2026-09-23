@@ -18,7 +18,8 @@ export class AppConfig {
     secretAccessKey: string
     forcePathStyle: boolean
   }
-  readonly corsOrigins: string[]
+  // Read-only: every consumer receives the validated snapshot's own list.
+  readonly corsOrigins: readonly string[]
   readonly trustProxy: string
   readonly outboxPollMs: number
   readonly openapiUiEnabled: boolean

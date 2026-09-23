@@ -50,6 +50,16 @@ describe('boot-time env validation', () => {
     ).rejects.toThrow(/DATABASE_URL/u)
   })
 
+  // The same gate, from the entrypoint's side: a .env carrying everything but
+  // NODE_ENV, and none in the shell, is refused by name.
+  it('refuses to construct the module when NODE_ENV is absent', async () => {
+    vi.stubEnv('NODE_ENV', undefined)
+    const fresh = await importConfigWith([...REQUIRED, ''].join('\n'))
+    await expect(
+      Test.createTestingModule({ imports: [fresh.ConfigModule] }).compile(),
+    ).rejects.toThrow(/NODE_ENV/u)
+  })
+
   // The factory must hand AppConfig the object `validate` produced, not a
   // second parse of process.env: @nestjs/config writes only strings, numbers
   // and booleans back to process.env, so an array such as CORS_ORIGINS

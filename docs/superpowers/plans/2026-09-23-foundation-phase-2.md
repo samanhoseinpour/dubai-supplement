@@ -2211,13 +2211,30 @@ Add to `apps/api/package.json` scripts: `"openapi": "node dist/openapi.js"`, and
 
 - [ ] **Step 6: Serve the UI only in development**
 
-In `main.ts`, after the document is available:
+**Amended 2026-09-24.** Task 8 moved `createApp()` out of `main.ts` into
+`src/app.factory.ts`, leaving `main.ts` as a nine-line `bootstrap()` pair that no
+test can reach. Put this **inside `createApp()`**, after the pipe and filter are
+registered — in `main.ts` it would grow the untestable region back, and the
+security wiring test exists precisely to stop that.
 
 ```ts
 if (config.openapiUiEnabled) {
   SwaggerModule.setup('docs', app, buildDocument(app))
 }
 ```
+
+**Helmet's default CSP blocks the Swagger UI.** `registerSecurity` registers
+`@fastify/helmet` with no options, so `helmet@8.3.0`'s defaults are live on every
+route. Three directives conflict: `img-src 'self' data:` blocks the
+`validator.swagger.io` badge, `script-src 'self'` plus `script-src-attr 'none'`
+block the UI's inline bootstrap, and `default-src 'self'` governs `connect-src`,
+confining "Try it out" to the same origin. Pass an explicit
+`contentSecurityPolicy` to `app.register(helmet, …)` inside `registerSecurity`,
+**gated on `config.openapiUiEnabled`** — which `registerSecurity` already has in
+hand, so no signature change is needed. It must **not** relax CSP when the UI is
+off, and a test must assert `content-security-policy` differs between the two
+config states. Confirm which directive actually fires against
+`@nestjs/swagger` 12.0.1's real page rather than assuming this list is complete.
 
 - [ ] **Step 7: Generate, commit the artefact, verify**
 
@@ -3676,7 +3693,9 @@ describe('PROCESS_ROLE', () => {
 
 - [ ] **Step 2: Run it and watch it fail, then implement**
 
-`src/main.ts` gains, after the filter and pipe registration:
+`src/main.ts`'s `bootstrap()` gains, after `createApp()` returns. (Task 8 moved the
+filter and pipe registration into `src/app.factory.ts`; only the relay start and
+`listen` belong in `main.ts`.)
 
 ```ts
 const config = app.get(AppConfig)

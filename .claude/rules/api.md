@@ -18,8 +18,13 @@ paths:
 - **No `MiddlewareConsumer`.** Use guards, interceptors, or
   `fastify.addHook` — middleware ordering under the Fastify adapter is a
   source of surprises.
-- **Terminus:** use `HealthIndicatorService`, not the deprecated
-  `HealthIndicator` base class.
+- **Terminus:** use `HealthIndicatorService`. The `HealthIndicator` base class
+  and `HealthCheckError` were **removed** in terminus 12 — not deprecated, so
+  code written against them will not compile. `status` is a reserved key in the
+  detail object; passing it is a type error.
+- **`ValidationError` is ours**, from `src/shared/errors`. `@nestjs/common`
+  exports an unrelated `ValidationError` _interface_ — if the editor
+  auto-imports it, `new ValidationError(...)` will not compile.
 - **No `@nestjs/event-emitter`.** Domain events go through the transactional
   outbox (ADR-0009). The import is banned by lint.
 - **Tests are Vitest with `app.inject()`.** No supertest, no Jest globals.

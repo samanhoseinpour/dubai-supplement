@@ -11,10 +11,13 @@ services:
     ports: ['127.0.0.1:5432:5432']
     volumes: ['pgdata:/var/lib/postgresql/data']
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U dubaisupp -d dubaisupp']
+      # -h forces TCP: the entrypoint's first-boot temporary server answers on
+      # the Unix socket only, so a socket probe reports ready before port 5432 is.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U dubaisupp -d dubaisupp']
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7.2-alpine
@@ -26,6 +29,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   rustfs:
     image: rustfs/rustfs:1.0.0
@@ -40,6 +44,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 10s
 
   # Creates the bucket once the gateway is healthy, then exits 0. The image ships
   # no CLI (and MinIO's `mc` is a different project), so the image's own curl
@@ -61,7 +66,7 @@ services:
     restart: 'no'
 
   mailpit:
-    image: axllent/mailpit
+    image: axllent/mailpit:v1.31.2
     restart: unless-stopped
     # Not a real dependency. `up --wait` treats a one-shot service that exited 0
     # as a failure unless some service depends on it with
@@ -71,7 +76,7 @@ services:
       rustfs-init: { condition: service_completed_successfully }
     ports: ['127.0.0.1:1025:1025', '127.0.0.1:8025:8025']
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8025/readyz']
+      test: ['CMD', '/mailpit', 'readyz']
       interval: 5s
       timeout: 5s
       retries: 10

@@ -738,6 +738,32 @@ git commit -m "feat(contracts): add common Zod shapes and the RFC 9457 error con
 
 §9.2. Four services with healthchecks so `up -d --wait` returns only when they are usable, all bound to `127.0.0.1` so nothing is exposed on the LAN.
 
+> **Amended after implementation (2026-09-23).** Five values in the compose block
+> below were wrong and are corrected in the shipped `infra/compose.yaml`, which is
+> the authority. Each was proven by watching it fail, and both reviews reproduced
+> the premises independently:
+>
+> 1. **`rustfs-cli` does not exist** in `rustfs/rustfs:1.0.0` (`command -v` → 127;
+>    `mc` is absent too). The bucket is created with the image's own
+>    `curl --aws-sigv4`, region `default`.
+> 2. **The RustFS healthcheck `GET /` can never pass** — it is an anonymous
+>    ListBuckets returning 403, so `curl -f` exits 22 and the container never goes
+>    healthy. Use `/health/ready`, which reports real write-quorum readiness.
+> 3. **Compose 5.1.2 fails `--wait` on the exited(0) one-shot** init container, so
+>    `db:up` exited 1 with all four services healthy. Resolved with
+>    `mailpit.depends_on: rustfs-init: service_completed_successfully`.
+> 4. **`pg_isready` with no `-h` probes the Unix socket**, which is ready while the
+>    first-boot temporary server runs with `listen_addresses=''` — `--wait` could
+>    return before TCP 5432 accepts. Use `-h 127.0.0.1`.
+> 5. **`axllent/mailpit:latest` is unpinned** and its healthcheck depended on
+>    BusyBox `wget`; Renovate cannot pin a bare `latest`. Pinned to `v1.31.2` with
+>    the image's own `/mailpit readyz` probe.
+>
+> `start_period: 10s` was also added to the three healthchecks authored here.
+> RustFS additionally does **not** enforce region and returns 200 (not 409) on
+> CreateBucket for an existing bucket — Task 14's `ensureBucket()` must not depend
+> on catching a 409.
+
 **Files:**
 
 - Create: `infra/compose.yaml`

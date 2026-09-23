@@ -9,8 +9,8 @@
     "./next": "./next.js"
   },
   "dependencies": {
-    "typescript-eslint": "catalog:",
-    "eslint-plugin-boundaries": "catalog:"
+    "eslint-plugin-boundaries": "catalog:",
+    "typescript-eslint": "catalog:"
   },
   "scripts": {
     "lint": "eslint ."

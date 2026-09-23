@@ -1870,6 +1870,8 @@ Run: `pnpm check`
 
 Expected: exit 0, ending with `check-docs: OK`. Turbo finds no `lint`/`typecheck`/`test` tasks (no workspaces implement them yet); `sherif` reports no version drift; `check:docs` passes.
 
+> **Do not run `sherif -f`.** Its autofix removes `apps/*` from `pnpm-workspace.yaml`, because no app matches the glob until Phase 2, and reformats the file while it is there. The unmatched-glob finding is a _warning_ and sherif exits 0 on warnings, so nothing needs fixing. Fix reported _errors_ by hand.
+
 - [ ] **Step 7: Commit**
 
 ```bash

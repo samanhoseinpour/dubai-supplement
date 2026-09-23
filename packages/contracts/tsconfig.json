@@ -1,0 +1,6 @@
+{
+  "extends": "@ds/config-typescript/library.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "." },
+  "include": ["src/**/*.ts", "vitest.config.ts", "eslint.config.js"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

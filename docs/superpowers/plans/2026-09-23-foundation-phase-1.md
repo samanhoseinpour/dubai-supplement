@@ -1120,8 +1120,15 @@ pnpm exec lefthook install
 git commit --allow-empty -m "bad message with no type"      # expect commitlint to reject
 git commit --allow-empty -m "chore: ok" -m "Co-Authored-By: X <x@y.z>"  # expect guard to reject
 git commit --allow-empty -m "chore: verify hooks"           # expect success
-git reset --hard HEAD~1
+git reset --soft HEAD~1 && git reset                        # NOT --hard
 ```
+
+> **Never use `git reset --hard` here.** It discards working-tree changes as
+> well as the commit. During execution it silently reverted `lefthook.yml` to
+> the version already committed, leaving the hooks installed but configured
+> with nothing — so they ran, printed their banner, and enforced no rule at
+> all. `--soft` followed by a plain `reset` removes the commit and keeps the
+> tree.
 
 Expected: the first two commits are rejected with a non-zero exit, the third succeeds. This is spec §16 DoD 6's "a test commit containing `Co-Authored-By:` is rejected locally".
 

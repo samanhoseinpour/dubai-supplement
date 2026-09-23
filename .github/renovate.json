@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests",
+    "schedule:weekly"
+  ],
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    { "groupName": "nestjs", "matchPackageNames": ["@nestjs/**", "@nest-lab/**"] },
+    {
+      "groupName": "next",
+      "matchPackageNames": ["next", "react", "react-dom", "eslint-config-next"]
+    },
+    {
+      "groupName": "eslint",
+      "matchPackageNames": ["eslint", "typescript-eslint", "eslint-plugin-**"]
+    },
+    { "groupName": "drizzle", "matchPackageNames": ["drizzle-orm", "drizzle-kit"] },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.1.0",
+      "description": "ADR-0014: @nestjs/cli and typescript-eslint both reject TS 7. Re-evaluate no earlier than 2026-11-24."
+    },
+    {
+      "matchPackageNames": ["drizzle-orm", "drizzle-kit"],
+      "allowedVersions": "<1.0.0",
+      "description": "Spec D6: Drizzle 1.0 is still pre-release."
+    },
+    {
+      "matchPackageNames": ["ioredis"],
+      "allowedVersions": "<6.0.0",
+      "description": "ADR-0017: ioredis 6 defaults to RESP3."
+    }
+  ]
+}

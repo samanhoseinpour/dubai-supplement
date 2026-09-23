@@ -54,4 +54,43 @@ describe('ProblemDetailsSchema', () => {
       }),
     ).toThrow()
   })
+
+  it('rejects a body missing a required member', () => {
+    expect(() =>
+      ProblemDetailsSchema.parse({
+        type: 'urn:problem:NOT_FOUND',
+        title: 'Not Found',
+        status: 404,
+        code: 'NOT_FOUND',
+      }),
+    ).toThrow()
+  })
+
+  it('rejects a non-integer status', () => {
+    expect(() =>
+      ProblemDetailsSchema.parse({
+        type: 'urn:problem:NOT_FOUND',
+        title: 'Not Found',
+        status: 404.5,
+        instance: 'req-4',
+        code: 'NOT_FOUND',
+      }),
+    ).toThrow()
+  })
+
+  it('rejects a malformed errors member', () => {
+    const problem = {
+      type: 'urn:problem:VALIDATION_FAILED',
+      title: 'Validation Failed',
+      status: 400,
+      instance: 'req-5',
+      code: 'VALIDATION_FAILED',
+    }
+    expect(() => ProblemDetailsSchema.parse({ ...problem, errors: 'oops' })).toThrow()
+    expect(() => ProblemDetailsSchema.parse({ ...problem, errors: [{ path: 'page' }] })).toThrow()
+    // A raw Zod issue carries path as an array; the wire shape is a string.
+    expect(() =>
+      ProblemDetailsSchema.parse({ ...problem, errors: [{ path: ['page'], message: 'bad' }] }),
+    ).toThrow()
+  })
 })

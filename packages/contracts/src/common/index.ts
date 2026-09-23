@@ -11,12 +11,18 @@ export const slug = z
 /**
  * HTTP inputs are normalized here; the domain entity normalizes again on
  * write (§6.3), so both paths agree. Zod 4.6 counts code points, which is
- * the semantics we want — a ZWNJ costs one.
+ * the semantics we want — a ZWNJ costs one. Whitespace-only input is
+ * rejected but never trimmed: `@ds/persian` stays the single authority on
+ * what stored text looks like, so no second normalization happens here.
  */
 export function persianText(max: number): z.ZodType<string> {
   return z.preprocess(
     (v) => (typeof v === 'string' ? normalizePersian(v) : v),
-    z.string().min(1).max(max),
+    z
+      .string()
+      .min(1)
+      .max(max)
+      .refine((s) => s.trim().length > 0, 'must not be blank'),
   )
 }
 

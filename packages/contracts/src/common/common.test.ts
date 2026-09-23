@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { PageQuerySchema, paginated, persianText, slug } from './index.js'
+import { PageQuerySchema, id, paginated, persianText, slug } from './index.js'
 import { z } from 'zod'
+
+describe('id', () => {
+  it('accepts a UUID and rejects other strings', () => {
+    const uuid = '0199f3c0-1111-7000-8000-000000000000'
+    expect(id.parse(uuid)).toBe(uuid)
+    expect(() => id.parse('not-a-uuid')).toThrow()
+  })
+})
 
 describe('persianText', () => {
   it('normalizes before validating, so Arabic yeh is accepted', () => {
@@ -17,6 +25,12 @@ describe('persianText', () => {
 
   it('rejects an empty string', () => {
     expect(() => persianText(50).parse('')).toThrow()
+  })
+
+  it('rejects whitespace-only input but never trims what it accepts', () => {
+    expect(() => persianText(50).parse('   ')).toThrow()
+    expect(persianText(50).parse('یک')).toBe('یک')
+    expect(persianText(50).parse(' یک ')).toBe(' یک ')
   })
 })
 

@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "prepare": "lefthook install",
     "dev": "turbo run dev",
     "lint": "turbo run lint --output-logs=errors-only",
     "typecheck": "turbo run typecheck --output-logs=errors-only",

@@ -1,0 +1,73 @@
+{
+  "attribution": { "commit": "", "pr": "", "sessionUrl": false },
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(pnpm check*)",
+      "Bash(pnpm check:*)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm typecheck*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm build*)",
+      "Bash(pnpm dev*)",
+      "Bash(pnpm db:*)",
+      "Bash(pnpm openapi:generate*)",
+      "Bash(pnpm format*)",
+      "Bash(pnpm e2e*)",
+      "Bash(pnpm boundaries*)",
+      "Bash(pnpm install)",
+      "Bash(pnpm audit:authors*)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr create *)",
+      "WebFetch(domain:docs.nestjs.com)",
+      "WebFetch(domain:nextjs.org)",
+      "WebFetch(domain:orm.drizzle.team)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm remove *)",
+      "Bash(pnpm update *)",
+      "Bash(pnpm --filter *)",
+      "Bash(pnpm dlx *)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.local)",
+      "Read(.env.*.local)",
+      "Read(./**/dist/**)",
+      "Read(./**/.next/**)",
+      "Read(./**/coverage/**)",
+      "Edit(./pnpm-lock.yaml)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm publish *)",
+      "Bash(git commit *--no-verify*)",
+      "Bash(git commit *-n *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(rm -rf *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/no-ai-trailers.sh" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "bash .claude/hooks/format-and-lint.sh" }]
+      }
+    ],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "bash .claude/hooks/verify.sh" }] }]
+  }
+}

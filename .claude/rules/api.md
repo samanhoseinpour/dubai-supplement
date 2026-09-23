@@ -9,6 +9,12 @@ paths:
   lint. Adapter options live in one place: `bodyLimit` 1 MiB, `rawBody: true`,
   `trustProxy` from the `TRUST_PROXY` env var, and `logger: false` because
   nestjs-pino owns logging.
+- **`trustProxy` is never a number.** Fastify 5.12.5 fails a numeric
+  `trustProxy` closed — it returns `() => false` and trusts nothing, with no
+  error, so `req.ip` silently becomes the socket peer and every client behind
+  the proxy shares one throttle bucket. Use a CIDR list or one of
+  proxy-addr's presets (`loopback`, `linklocal`, `uniquelocal`), comma
+  separated. TypeScript will also reject a number — do not cast past it.
 - **No `ValidationPipe`, ever.** Validation is the global
   `StandardSchemaValidationPipe` with Zod schemas from `@ds/contracts`, used
   as `@Body({ schema })`, `@Query({ schema })`, `@Param(name, { schema })`.

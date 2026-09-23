@@ -1496,7 +1496,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Test } from '@nestjs/testing'
 import { Controller, Get, Module } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
-import { ProblemFilter } from '../../src/infra/http/problem.filter.js'
+import { ProblemFilter } from '../../src/infra/http/index.js'
 import { ConflictError, NotFoundError } from '../../src/shared/errors/index.js'
 
 @Controller('boom')
@@ -1728,7 +1728,7 @@ import { Controller, Get, Module, Query } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { PageQuerySchema } from '@ds/contracts'
 import { buildValidationPipe } from '../../src/infra/http/validation.js'
-import { ProblemFilter } from '../../src/infra/http/problem.filter.js'
+import { ProblemFilter } from '../../src/infra/http/index.js'
 
 @Controller('things')
 class ThingsController {

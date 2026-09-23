@@ -17,6 +17,12 @@ export default [
             { name: 'class-validator', message: 'Contracts are Zod only (spec §5.5).' },
             { name: 'class-transformer', message: 'Contracts are Zod only (spec §5.5).' },
             {
+              name: '@nestjs/common',
+              importNames: ['ValidationError', 'ValidationPipe'],
+              message:
+                'ValidationError is the AppError subclass in src/shared/errors (spec §5.5b); validation is StandardSchemaValidationPipe, never ValidationPipe.',
+            },
+            {
               name: '@nestjs/event-emitter',
               message: 'Domain events go through the transactional outbox (spec §5.6).',
             },

@@ -17,6 +17,12 @@ describe('isIranMobile', () => {
 })
 
 describe('isNationalId', () => {
+  it('accepts a checksum-valid id', () => {
+    expect(isNationalId('0499370899')).toBe(true)
+  })
+  it('accepts an id written with Persian digits', () => {
+    expect(isNationalId('۰۴۹۹۳۷۰۸۹۹')).toBe(true)
+  })
   it('rejects a well-formed but checksum-invalid id', () => {
     expect(isNationalId('1234567890')).toBe(false)
   })

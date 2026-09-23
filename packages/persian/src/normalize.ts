@@ -14,11 +14,7 @@ const ARABIC_INDIC_ZERO = 0x0660
  * touch U+200C ZWNJ: it distinguishes «ماسل‌تک» from «ماسلتک».
  */
 export function normalizePersian(value: string): string {
-  return value
-    .replace(ARABIC_YEH, 'ی')
-    .replace(ARABIC_KAF, 'ک')
-    .replace(PERSIAN_DIGITS, (d) => String(d.charCodeAt(0) - PERSIAN_ZERO))
-    .replace(ARABIC_INDIC_DIGITS, (d) => String(d.charCodeAt(0) - ARABIC_INDIC_ZERO))
+  return toAsciiDigits(value.replace(ARABIC_YEH, 'ی').replace(ARABIC_KAF, 'ک'))
 }
 
 export function toAsciiDigits(value: string): string {

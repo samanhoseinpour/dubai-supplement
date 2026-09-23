@@ -1,0 +1,12 @@
+{
+  "name": "@ds/config-typescript",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base.json": "./base.json",
+    "./nestjs.json": "./nestjs.json",
+    "./nextjs.json": "./nextjs.json",
+    "./library.json": "./library.json"
+  }
+}

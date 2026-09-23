@@ -199,6 +199,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: 'catalog:'
         version: 21.2.3
+      '@ds/config-typescript':
+        specifier: workspace:*
+        version: link:packages/config-typescript
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.6.1)
@@ -220,6 +223,8 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+
+  packages/config-typescript: {}
 
 packages:
 

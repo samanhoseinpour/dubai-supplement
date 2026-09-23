@@ -5,7 +5,11 @@
   "version": "0.0.0",
   "packageManager": "pnpm@12.5.1",
   "devEngines": {
-    "runtime": { "name": "node", "version": "24.x", "onFail": "download" }
+    "runtime": {
+      "name": "node",
+      "version": "24.x",
+      "onFail": "download"
+    }
   },
   "scripts": {
     "build": "turbo run build",
@@ -32,6 +36,7 @@
   "devDependencies": {
     "@commitlint/cli": "catalog:",
     "@commitlint/config-conventional": "catalog:",
+    "@ds/config-typescript": "workspace:*",
     "eslint": "catalog:",
     "lefthook": "catalog:",
     "prettier": "catalog:",

@@ -1,27 +1,33 @@
 import { Module } from '@nestjs/common'
-import { ThrottlerModule } from '@nestjs/throttler'
-import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
+import { APP_GUARD } from '@nestjs/core'
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { Redis } from 'ioredis'
-import { ConfigModule } from './infra/config/index.js'
+import { AppConfig, ConfigModule } from './infra/config/index.js'
 import { HealthModule } from './infra/health/health.module.js'
+import { buildThrottlerOptions } from './infra/http/index.js'
 import { LoggerModule } from './infra/logger/index.js'
 
-// Spike scope plus config and logging. Validation, errors, security and the
-// data layer arrive as their own Phase 2 tasks; this exists to prove Nest 12
-// ESM boots on Fastify with the four packages whose peers were in question.
+// Config, logging, the global throttler and health. Validation, the problem
+// filter and the security plugins are wired in main.ts; the data layer
+// arrives with its own Phase 2 tasks.
 @Module({
   imports: [
     ConfigModule,
     LoggerModule,
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60_000, limit: 120 }],
-      storage: new ThrottlerStorageRedisService(
-        new Redis(process.env.REDIS_URL ?? 'redis://127.0.0.1:6379/0', {
-          lazyConnect: true,
-        }),
-      ),
+    // Until the data layer provides the shared Redis client, the throttler
+    // owns a lazily connecting one of its own — built from the validated
+    // config, never from process.env. `imports` names where the factory's
+    // dependency comes from; the throttler's typing also demands it, because
+    // its declarations import `@nestjs/common/interfaces`, a subpath Nest
+    // 12's exports map does not expose, so `ModuleMetadata` is `any` there.
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [AppConfig],
+      useFactory: (config: AppConfig) =>
+        buildThrottlerOptions(new Redis(config.redisUrl, { lazyConnect: true })),
     }),
     HealthModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

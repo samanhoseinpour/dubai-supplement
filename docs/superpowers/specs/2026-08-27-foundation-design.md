@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Date** | 2026-08-27 (revised the same day after a 14-agent adversarial review; 81 findings triaged) |
-| **Status** | Approved in brainstorming (sections 1–5) by Saman Hoseinpour; awaiting final read before the implementation plan |
+| **Date** | 2026-08-27 (revised the same day after a 14-agent adversarial review; 81 findings triaged) · **revised 2026-09-23** after a four-week pause: dependency pins refreshed against the registry, and the two open decisions in §19 settled |
+| **Status** | Approved by Saman Hoseinpour. §19 decisions settled 2026-09-23; implementation planned in phases, Phase 1 first |
 | **Owner** | Saman Hoseinpour (solo developer, working with Claude Code) |
-| **Inputs** | `docs/research/2026-08-27-foundation-research.md`, `docs/research/2026-08-27-liara-verification.md` |
-| **Next step** | `docs/superpowers/plans/` implementation plan via the writing-plans skill |
+| **Inputs** | “Dubai Supplement — Foundation Research”, 2026-08-27, and “Liara deployment verification”, 2026-08-27 — both held **outside this repository** (§19.2); the Liara facts are 4 weeks old and are re-verified before Phase 4 |
+| **Next step** | `docs/superpowers/plans/2026-09-23-foundation-phase-1.md` — Phase 1 (governance & skeleton) via the writing-plans skill |
 
 ## 1. Purpose and scope
 
@@ -65,7 +65,6 @@ dubai-supplement/
 │   ├── glossary.md                  Persian ↔ English domain vocabulary (the ubiquitous language)
 │   ├── regulatory.md                enamad, Iran FDA supplements rule, TTAC, rial redenomination — facts and dates
 │   ├── runbooks/                    iran-mirrors.md · go-live.md · first-deploy.md
-│   ├── research/                    the 2026-08-27 research report and Liara verification (see §19.2 for the public/private decision)
 │   └── superpowers/{specs,plans}/   this spec and the plans that follow
 ├── .claude/                 settings.json · rules/ · hooks/ · agents/ · skills/
 ├── .github/                 workflows/ci.yml · workflows/deploy.yml · PULL_REQUEST_TEMPLATE.md · renovate.json
@@ -86,7 +85,7 @@ Target versions were verified against the npm registry on 2026-08-27 (Appendix A
 |---|---|---|
 | Runtime | Node.js 24.x | Pinned via `devEngines.runtime` (`onFail: download`) and `.node-version`; no nvm/corepack |
 | Language | TypeScript 6.0.x | TS 7 blocked by Renovate; tsconfigs written TS-7-clean (no `baseUrl`, no `paths`) |
-| Package manager | pnpm 11.24.x | **All pnpm settings live in `pnpm-workspace.yaml`** (pnpm 11 ignores the `pnpm` field of package.json): `catalog:` + `catalogMode: strict`; `allowBuilds` allowlist (`esbuild`, `@swc/core`, `sharp`, `lefthook`); `minimumReleaseAge` default 1440 min with `minimumReleaseAgeExclude: ['@nestjs/*']` while 12.0.x is < 24 h old; `forceLegacyDeploy: true` (so `pnpm deploy` works with symlinked workspaces; `injectWorkspacePackages` stays off so `pnpm dev` sees rebuilt `dist` through symlinks); `peerDependencyRules.allowedVersions` for the Nest-12 peer lag (§5.1); `blockExoticSubdeps: true` |
+| Package manager | pnpm 11.24.x | **All pnpm settings live in `pnpm-workspace.yaml`** (pnpm 11 ignores the `pnpm` field of package.json): `catalog:` + `catalogMode: strict`; `allowBuilds` allowlist (`esbuild`, `@swc/core`, `sharp`, `lefthook`); `minimumReleaseAge` default 1440 min (the `minimumReleaseAgeExclude: ['@nestjs/*']` carve-out is **deleted** — it existed only because 12.0.x was under 24 h old on 2026-08-27; `@nestjs/*` is a month old as of 2026-09-23); `forceLegacyDeploy: true` (so `pnpm deploy` works with symlinked workspaces; `injectWorkspacePackages` stays off so `pnpm dev` sees rebuilt `dist` through symlinks); `peerDependencyRules.allowedVersions` for the Nest-12 peer lag (§5.1); `blockExoticSubdeps: true` |
 | Task runner | Turborepo 2.10.x | Task graph: `build` dependsOn `["^build"]` exactly; `dev` dependsOn `["^build"]`, persistent, no cache; `lint`, `typecheck`, `test`, `test:integration`, `boundaries` and `e2e` each dependsOn `["^build"]` (apps resolve `@ds/*` through compiled `dist`); `test:integration` and `e2e` are `cache: false`; `api#openapi` dependsOn `["build"]` with `outputs: ["openapi.json"]`; `api#seed` dependsOn `["build"]`, `cache: false`; `@ds/api-client#generate` dependsOn `["api#openapi"]` with `outputs: ["src/generated/**"]`; `envMode: strict`; `globalPassThroughEnv: ["TESTCONTAINERS_*", "DOCKER_HOST"]`; remote cache **off** |
 | Backend | NestJS 12.0.x, `@nestjs/platform-fastify` 12.0.x, Fastify 5.12.x, `@nestjs/cli` 12.0.x | ESM (`"type": "module"`, `nodenext`); SWC builder with `typeCheck: true`; fallback NestJS 11.2.x CJS if the spike fails (§5.1) |
 | Validation | Zod 4.4.x, zod-openapi 6.0.x | Nest 12 native `StandardSchemaValidationPipe`; `@nestjs/swagger` 12 `standardSchemaConverter`; `class-validator`/`class-transformer` are never imported (ESLint `no-restricted-imports`) though they may appear in the lockfile as auto-installed peers of `@nestjs/swagger` |
@@ -146,7 +145,7 @@ NestJS 12 ESM on Fastify. Because 12.0.x is days old and several third-party pac
 
 1. `pnpm dlx @nestjs/cli@<pinned> new api --strict --skip-git --skip-install --package-manager pnpm --directory apps/api`, choosing **ESM** at the prompt (record the answer in ADR-0001).
 2. Reconcile the scaffold with §4.2: delete `test/`, `tsconfig.build.json`, `vitest.config.e2e.ts`, the oxlint script and dependency, `supertest`, `vite-tsconfig-paths` and the scaffold's prettier file; `tsconfig.json` = `{ "extends": "@ds/config-typescript/nestjs.json", … }`; `nest-cli.json` `compilerOptions: { builder: 'swc', typeCheck: true }`; every dependency rewritten to `catalog:`; keep `vitest.config.ts` minus the tsconfig-paths plugin.
-3. Peer overrides in `pnpm-workspace.yaml` (they only silence warnings — install does not fail on unmet peers, so the boot test is the real gate): `peerDependencyRules.allowedVersions` for `@nestjs/terminus`, `@nestjs/throttler`, `@nest-lab/throttler-storage-redis`, `nestjs-pino` against `@nestjs/common`/`@nestjs/core` `12`.
+3. Peer overrides in `pnpm-workspace.yaml` (they only silence warnings — install does not fail on unmet peers, so the boot test is the real gate). **Re-checked 2026-09-23: the ecosystem caught up.** `@nestjs/terminus` 12.1.0 now declares `^11.0.0 || ^12.0.0`, `@nestjs/throttler` 6.7.0 includes `^12.0.0`, and `nestjs-pino` 5.2.0 declares `^11.0.8 || ^12.0.2` — **all three overrides are deleted.** Exactly one remains: `@nest-lab/throttler-storage-redis` 1.2.0 still caps at `@nestjs/core`/`@nestjs/common` `^11.0.0`, so it keeps a `peerDependencyRules.allowedVersions` entry, and the hand-rolled `ThrottlerStorage`-over-ioredis fallback in §5.5 stays on the table.
 4. Add the Fastify adapter, `TerminusModule`, `ThrottlerModule` with `@nest-lab/throttler-storage-redis` (ioredis `lazyConnect: true`), `LoggerModule.forRoot()` (nestjs-pino).
 5. **Go:** `pnpm install` resolves, `nest build` passes, and `apps/api/test/integration/health.test.ts` (`FastifyAdapter`, `app.init()`, `getHttpAdapter().getInstance().ready()`, `app.inject({ method: 'GET', url: '/health/live' })`) returns 200. `health.test.ts` runs under the unit `vitest.config.ts` during the spike (the spike app has no database module; `vitest.integration.config.ts` and the Testcontainers setup arrive with the data-layer task, and the file moves there when `/health/ready` is added). If `nest build` and `node dist/main.js` boot but the test fails with a DI resolution error (missing `design:paramtypes` under Vite's Oxc transform), add `unplugin-swc` + `@swc/core` to `vitest.config.ts` before counting toward the no-go — the fallback decision is about Nest 12 peers, not the test transform. **No-go:** any of those fails at the 60-minute mark → fall back to NestJS 11.2.x CJS + nestjs-zod with the *same* module anatomy and contracts; nothing else in this spec changes. Either outcome is ADR-0001.
 
@@ -499,7 +498,7 @@ Every feature is a vertical slice: brainstorm → `docs/superpowers/specs/YYYY-M
 
 ### 13.2 Identity
 
-Repository-local `user.name "Saman Hoseinpour"` and `user.email` = the address chosen in §19.1 — recommended: the GitHub noreply address (`<ID>+samanhoseinpour@users.noreply.github.com`) with "Keep my email addresses private" and "Block command line pushes that expose my email" enabled; the alternative is a verified personal address. The address is written in exactly one place, `scripts/audit-authors.allowed`. Decide before the first push; public history is not rewritten afterwards. Optional, recommended: SSH commit signing (`gpg.format ssh`, `commit.gpgsign true`, the same key uploaded as a *signing* key) for the "Verified" badge.
+Repository-local `user.name "Saman Hoseinpour"` and `user.email` **`105006550+samanhoseinpour@users.noreply.github.com`** — the GitHub noreply address (decided 2026-09-23, §19.1), with "Keep my email addresses private" and "Block command line pushes that expose my email" enabled. The address is written in exactly one place, `scripts/audit-authors.allowed`. **Already applied:** the three pre-existing docs commits were re-authored to this identity on 2026-09-23, before any push. Optional, recommended: SSH commit signing (`gpg.format ssh`, `commit.gpgsign true`, the same key uploaded as a *signing* key) for the "Verified" badge.
 
 ### 13.3 Branching and protection
 
@@ -556,7 +555,7 @@ Products/variants/categories beyond Brand, inventory, cart, checkout and the Wha
 | Iranian network: Liara's build host or domestic servers losing access to npm/Docker Hub/GitHub | Nothing fetched at runtime; lockfile + vendored font; `--build-location germany` fallback; the same Dockerfiles built in CI on every `main` push; mirrors runbook |
 | Liara has no Postgres 17/18 or Valkey; ICU build unverified | PG 16 + Redis 7.2 everywhere; UUIDv7 in code; ICU check before the first migration with a documented fallback |
 | Public repository leaks a secret | env files git-ignored and Read-denied for Claude's file tools and recognised shell readers (arbitrary subprocesses are not covered until `sandbox` is adopted — deferred because Docker cannot run inside it); `.mcp.json` env expansion; gitleaks in CI; GitHub push protection as a second net |
-| Public repository exposes business/regulatory analysis under the owner's name | Saman decides before the first push whether `docs/research/` stays committed (§19.2) |
+| ~~Public repository exposes business/regulatory analysis under the owner's name~~ **Retired 2026-09-23** | The research was moved out of the repository and stripped from git history before any push (§19.2); the spec cites it by title and date |
 | `ds-api` reachable from the internet despite the design | Default subdomain disabled and verified from outside; `INTERNAL_API_TOKEN` guard recorded as the next hardening step |
 | Supplements sold online without an FDO/pharmacy licence (Iran FDA, 13 Jun 2026) | Business risk owned by Saman; recorded in `docs/regulatory.md`; the WhatsApp handoff keeps the site catalogue-first |
 | ICU differences between Node versions cause hydration mismatches | Format on the server only; pinned Node 24 in every environment |
@@ -565,8 +564,8 @@ Products/variants/categories beyond Brand, inventory, cart, checkout and the Wha
 
 ## 19. Manual actions and decisions only Saman can take (tracked in the plan)
 
-1. **Commit identity:** choose the GitHub noreply address (recommended) or confirm `samangithoseinpour@gmail.com` is verified on GitHub; it is recorded once in `scripts/audit-authors.allowed` and the existing local commits are re-authored to match before the first push.
-2. **Research documents public or private:** `docs/research/` contains analysis of sanctions/ToS exposure and regulatory risk under Saman's name. Default: keep it committed (public). Alternative: move it to a private location and reference it from `north-star.md` by title and date.
+1. ~~**Commit identity**~~ — **DONE 2026-09-23.** The GitHub noreply address `105006550+samanhoseinpour@users.noreply.github.com` was chosen; the three existing commits were re-authored to it and repo-local `user.name`/`user.email` are set. Still to record in `scripts/audit-authors.allowed` when that file is created (Phase 1). Confirm "Keep my email addresses private" and "Block command line pushes that expose my email" are on.
+2. ~~**Research documents public or private**~~ — **DONE 2026-09-23.** Moved out: both files now live in the private repository `~/Desktop/dubai-supplement-research/` and were stripped from this repository's git history with `git filter-repo` (nothing had been pushed). This spec and `north-star.md` cite them by title and date only.
 3. Install pnpm 11 and OrbStack; optionally configure Iranian registry mirrors.
 4. Create the GitHub repository (the plan runs `gh repo create --public` with Saman present) and enable the `main` ruleset and push protection.
 5. Liara account, private network, DBs, storage, apps (disable the api subdomain), API token → `LIARA_API_TOKEN`, `LIARA_APP_API`, `LIARA_APP_WEB` secrets; run `first-deploy.md`.

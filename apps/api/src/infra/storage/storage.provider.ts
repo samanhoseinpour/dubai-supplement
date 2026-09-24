@@ -50,21 +50,38 @@ export class S3StorageProvider extends StorageProvider implements OnApplicationS
   }
 
   /**
-   * The bucket, after this returns — created if it was not there.
+   * The bucket, after this returns — created if it was not there, and ours.
    *
    * Idempotent on the success path, not only on the error path: RustFS
    * answers 200 to CreateBucket for a bucket that already exists (measured
-   * in Task 3), so against it nothing is ever thrown and the catch below is
-   * dead code. Real S3 and Liara answer 409, which is the only reason it
-   * exists. Both names are accepted because which one comes back depends on
-   * whether the existing bucket is the caller's own.
+   * in Task 3), so against it nothing is ever thrown and neither branch
+   * below runs at all. Real S3 and Liara answer 409, and *which* 409
+   * decides everything, because S3 bucket names are global:
+   *
+   * - `BucketAlreadyOwnedByYou` — it is ours. CreateBucket is idempotent for
+   *   the owner, so there is nothing left to do.
+   * - `BucketAlreadyExists` — the name is taken by **another account**, so
+   *   nothing here can read or write it. This is what a mistyped or
+   *   already-claimed S3_BUCKET looks like, and treating it as success would
+   *   let docs/runbooks/first-deploy.md §6 report OK and the first real
+   *   `put` 403 afterwards — with the step that existed to catch it already
+   *   passed. It fails here instead, naming the bucket.
    */
   async ensureBucket(): Promise<void> {
     try {
       await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }))
     } catch (error) {
       const name = (error as { name?: string }).name
-      if (name !== 'BucketAlreadyOwnedByYou' && name !== 'BucketAlreadyExists') throw error
+      if (name === 'BucketAlreadyOwnedByYou') return
+      if (name === 'BucketAlreadyExists') {
+        throw new Error(
+          `S3 bucket "${this.bucket}" already exists and is owned by another account, so ` +
+            'nothing here can write to it. S3 bucket names are global — set S3_BUCKET to a ' +
+            'name this account owns.',
+          { cause: error },
+        )
+      }
+      throw error
     }
   }
 

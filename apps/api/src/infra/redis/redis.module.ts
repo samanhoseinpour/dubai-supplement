@@ -111,11 +111,22 @@ class RedisCloser implements OnApplicationShutdown {
     // matters most; below `warn` it would not reach a production LOG_LEVEL
     // of `info` at all.
     //
-    // Two branches because they are two different facts, and only the first
-    // can be relied on to arrive: a quit() that loses the race NEVER settles
-    // afterwards — measured, still pending 15 s after disconnect() with the
-    // offline queue holding both it and the command it was behind — so a log
-    // line hung off the rejection alone would be a signal that never fires.
+    // Two branches because they are two different facts, and because only one
+    // of them can be relied on to arrive. Whether a quit() that lost the race
+    // ever settles depends on the shape of the outage — measured both ways
+    // against ioredis 5.11.1, timed from the disconnect() below:
+    //
+    //  - reconnects REFUSED (a dead port): still pending at +15 s, status
+    //    `reconnecting`, the offline queue holding it and the command it was
+    //    behind.
+    //  - the socket ACCEPTS and never answers (a hung Redis, a balancer with a
+    //    dead backend): ioredis's 2 s `disconnectTimeout` destroys the stream,
+    //    `closeHandler` flushes the queue, and both reject "Connection is
+    //    closed." at ~2.2 s.
+    //
+    // So the rejection is not a signal that can be counted on and the timeout
+    // is. The race is already decided in both cases, and the `.then` above
+    // absorbs the late rejection in the second.
     if (outcome === TIMED_OUT) {
       this.logger.warn({
         msg: `redis did not drain within ${String(REDIS_QUIT_TIMEOUT_MS)} ms of shutdown; dropping the connection`,
@@ -130,14 +141,20 @@ class RedisCloser implements OnApplicationShutdown {
     // it is here for is the other branch: a quit() that lost the race, whose
     // client would otherwise reconnect for as long as the outage lasts.
     //
-    // What it drops does not come back. A command still in the offline queue
-    // — including that quit() itself — stays pending forever rather than
-    // rejecting: measured at 15 s after this line, `offlineQueue` still 2,
-    // and no timer left on the event loop. That is harmless while this is the
-    // only shutdown hook that touches Redis, but Nest runs the hooks at one
-    // hierarchy level concurrently (`Promise.allSettled`), so a hook added
-    // later that awaited a Redis command would never resolve and would hang
-    // `app.close()` outright.
+    // What it drops may never come back, and which it is depends on the
+    // outage, as above: with reconnects refused, a command left in the offline
+    // queue — that quit() included — is still pending at +15 s with status
+    // `reconnecting` and no timer left on the event loop; against a socket
+    // that accepts and stays silent it rejects at ~2.2 s. The refused case is
+    // the one to design against.
+    //
+    // Harmless while this is the only shutdown hook that touches Redis. It
+    // stops being harmless for ANY later hook that issues a Redis command
+    // after this line — a sibling provider in this module, which Nest runs
+    // concurrently with this one (`Promise.allSettled` over one hierarchy
+    // level), or simply a hook in a module it reaches later. In the refused
+    // case status stays `reconnecting`, the command lands in an offline queue
+    // nothing will ever flush, and `app.close()` hangs on it.
     this.redis.disconnect()
   }
 }

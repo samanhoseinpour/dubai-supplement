@@ -59,13 +59,17 @@ export default [
         },
         { type: 'module', pattern: 'src/modules/*', capture: ['module'], partialMatch: false },
       ],
-      // The entrypoints and the out-of-tree test suite belong to no element,
-      // and the rule skips a file that is unknown in both dimensions. Naming
-      // them here is what makes `src/migrate.ts` and `test/integration/**`
-      // subject to the barrel rule instead of silently exempt from it.
+      // The entrypoints, the out-of-tree test suite and the package-root
+      // configs belong to no element, and `boundaries/dependencies` returns
+      // early for a file that is unknown in *both* dimensions. Naming them
+      // here is the whole reason `src/migrate.ts`, `test/integration/**` and
+      // `drizzle.config.ts` are subject to the barrel rule instead of
+      // silently exempt from it — delete this key and every policy below goes
+      // quiet for them while `pnpm check` stays green.
       'boundaries/files': [
         { category: 'entrypoint', pattern: 'src/*.ts' },
         { category: 'test', pattern: 'test/**/*.ts' },
+        { category: 'config', pattern: '*.config.ts' },
       ],
     },
     rules: {
@@ -93,10 +97,15 @@ export default [
               // still caught by `infra-barrel` above.
               from: { file: { path: ['src/migrate.ts', 'src/migrate.test.ts'] } },
               to: { element: { type: 'infra' } },
-              // The two lists are exact complements, and both are needed: the
-              // `allow` is what lifts the blanket `infra-barrel` above, and the
-              // `disallow` is what keeps the allowance to these three names
-              // instead of opening both directories.
+              // The two lists are complements over the file name, and both are
+              // needed: the `allow` is what lifts the blanket `infra-barrel`
+              // above, and the `disallow` is what keeps the allowance to these
+              // three names instead of opening both directories.
+              //
+              // `allow` additionally pins each leaf to the directory it lives
+              // in, so a future `src/infra/<other>/connect-timeout.ts` is not
+              // reachable by having borrowed the name. Such an import falls
+              // through to `infra-barrel` and is reported there.
               disallow: {
                 to: {
                   element: {
@@ -106,9 +115,21 @@ export default [
               },
               allow: [
                 { to: { element: { fileInternalPath: 'index.ts' } } },
-                { to: { element: { fileInternalPath: 'env.schema.ts' } } },
-                { to: { element: { fileInternalPath: 'migration-lock.ts' } } },
-                { to: { element: { fileInternalPath: 'connect-timeout.ts' } } },
+                {
+                  to: {
+                    element: { captured: { dir: 'config' }, fileInternalPath: 'env.schema.ts' },
+                  },
+                },
+                {
+                  to: {
+                    element: { captured: { dir: 'db' }, fileInternalPath: 'migration-lock.ts' },
+                  },
+                },
+                {
+                  to: {
+                    element: { captured: { dir: 'db' }, fileInternalPath: 'connect-timeout.ts' },
+                  },
+                },
               ],
               message:
                 'infra-barrel-migrate-allowance: src/migrate.ts and its colocated test may reach past a barrel only for the leaves that import nothing — env.schema.ts, migration-lock.ts, connect-timeout.ts.',

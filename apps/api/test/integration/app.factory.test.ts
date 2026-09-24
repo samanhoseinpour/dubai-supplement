@@ -37,9 +37,11 @@ describe('createApp', () => {
     expect(live.headers['strict-transport-security']).toContain('max-age=')
     expect(live.headers['content-security-policy']).toContain("default-src 'self'")
 
-    // TRUST_PROXY is loopback,uniquelocal: a forwarded address from the
-    // loopback peer is the client, and the same header from a peer outside
-    // the trusted networks is ignored — that peer is the client.
+    // TRUST_PROXY is loopback,uniquelocal — pinned by
+    // vitest.integration.config.ts's `env`, not read from the developer's
+    // .env: a forwarded address from the loopback peer is the client, and the
+    // same header from a peer outside the trusted networks is ignored — that
+    // peer is the client.
     const forwarded = await app.inject({
       method: 'GET',
       url: '/probe/ip',

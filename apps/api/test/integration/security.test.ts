@@ -16,6 +16,7 @@ import {
   THROTTLE_LIMIT,
   THROTTLE_TTL_MS,
 } from '../../src/infra/http/index.js'
+import { flushRedis } from '../setup/truncate.js'
 
 /**
  * The slice of Fastify's reply the cookie route drives — `@fastify/cookie`'s
@@ -47,7 +48,10 @@ const makeConfig = (over: Record<string, string> = {}) =>
     EnvSchema.parse({
       NODE_ENV: 'test',
       DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/d',
-      REDIS_URL: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379/0',
+      // No fallback: this file flushes whatever it is pointed at, and a
+      // default of localhost:6379 would be the developer's own dev Redis.
+      // The Testcontainers global setup is what writes this.
+      REDIS_URL: process.env.REDIS_URL,
       S3_ENDPOINT: 'http://127.0.0.1:9000',
       S3_BUCKET: 'b',
       S3_ACCESS_KEY_ID: 'k',
@@ -64,13 +68,13 @@ interface Ctx {
 /**
  * The guard and the Redis storage at a chosen limit, `registerSecurity` and
  * the problem filter as main.ts wires them, behind an adapter that trusts
- * what the config trusts. Counters outlive a process, so Redis is flushed
- * first: a bucket left by the previous run turns [200, 200, 429] into
- * [429, 429, 429].
+ * what the config trusts. Counters outlive a describe block, so the harness's
+ * Redis is flushed first: a bucket left by an earlier one turns [200, 200,
+ * 429] into [429, 429, 429]. It is the container's, never a shared instance.
  */
 async function build(config: AppConfig, limit: number): Promise<Ctx> {
+  await flushRedis()
   const redis = new Redis(config.redisUrl)
-  await redis.flushdb()
 
   @Module({
     imports: [
@@ -319,8 +323,8 @@ describe('security wiring', () => {
     beforeAll(async () => {
       const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
       const config = moduleRef.get(AppConfig)
+      await flushRedis()
       redis = new Redis(config.redisUrl)
-      await redis.flushdb()
       app = moduleRef.createNestApplication<NestFastifyApplication>(
         new FastifyAdapter({ logger: false, trustProxy: config.trustProxy }),
       )

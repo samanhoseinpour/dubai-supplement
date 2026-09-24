@@ -3,10 +3,27 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     root: './',
-    include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
+    // Unit only. Everything under test/integration/** needs Docker and runs
+    // under vitest.integration.config.ts, so this suite stays runnable with
+    // no daemon and no stores (§9.4 rule 3).
+    include: ['src/**/*.test.ts'],
     clearMocks: true,
-    // Application boots in tests log through pino to stdout; keep the run's
-    // output to vitest's own. A test that reads log lines sets its own level.
-    env: { LOG_LEVEL: 'fatal' },
+    // A complete, schema-valid environment with every store on a closed port.
+    // `ConfigModule.forRoot({ envFilePath: '.env', validate })` runs while the
+    // module is decorated, so merely importing the config barrel — which
+    // src/infra/logger/logger.module.test.ts does — validates the environment;
+    // without this the suite passes only on a machine that has apps/api/.env,
+    // and CI has none. LOG_LEVEL keeps an application boot's pino output off
+    // stdout: a test that reads log lines sets its own level.
+    env: {
+      LOG_LEVEL: 'fatal',
+      NODE_ENV: 'test',
+      DATABASE_URL: 'postgres://dubaisupp:dubaisupp@127.0.0.1:1/dubaisupp',
+      REDIS_URL: 'redis://127.0.0.1:1/0',
+      S3_ENDPOINT: 'http://127.0.0.1:1',
+      S3_BUCKET: 'dubaisupp',
+      S3_ACCESS_KEY_ID: 'rustfsadmin',
+      S3_SECRET_ACCESS_KEY: 'rustfsadmin',
+    },
   },
 })

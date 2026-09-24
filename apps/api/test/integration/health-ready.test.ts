@@ -1,16 +1,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { Test } from '@nestjs/testing'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
-import type { Redis } from 'ioredis'
-import type { Pool } from 'pg'
+import type { Pool, PoolClient } from 'pg'
 import { Logger, PARAMS_PROVIDER_TOKEN, type Params } from 'nestjs-pino'
 import { AppModule } from '../../src/app.module.js'
 import { AppConfig, EnvSchema } from '../../src/infra/config/index.js'
 import { DRIZZLE, PG_POOL, type Db } from '../../src/infra/db/index.js'
+import { POSTGRES_PROBE_TIMEOUT_MS, REDIS_PROBE_TIMEOUT_MS } from '../../src/infra/health/index.js'
 import { ProblemFilter } from '../../src/infra/http/index.js'
 import { buildLoggerOptions } from '../../src/infra/logger/index.js'
 import { MAX_ATTEMPTS, outboxEvents } from '../../src/infra/outbox/index.js'
-import { REDIS } from '../../src/infra/redis/index.js'
 import { truncateAll } from '../setup/truncate.js'
 
 /**
@@ -272,19 +271,13 @@ describe('GET /health with Redis unreachable', () => {
     lines.length = 0
   })
 
-  // Deliberately not `app.close()`. Measured: it never returns. RedisCloser
-  // calls `quit()` on a client that is still trying to reach a closed port,
-  // ioredis queues it behind the probe it has not given up on, and with the
-  // client manually closing nothing is left to flush that queue — 20s in, the
-  // close had not settled and the status was still `reconnecting`. That is a
-  // real graceful-shutdown defect in RedisModule, not in this endpoint: a
-  // SIGTERM during a Redis outage would hang the container the same way. It
-  // is recorded against Task 14's RedisCloser rather than fixed here, and the
-  // two resources this suite actually holds are released by hand so it cannot
-  // hang the run.
+  // It does resolve, and it is slow: 4548 / 4552 / 4543 ms over three runs.
+  // The delay is RedisCloser's quit() waiting out ioredis's retry budget, and
+  // because it resolves rather than rejects, the shutdown hooks after it still
+  // run. Against a SIGTERM grace period that delay matters and is recorded
+  // against Task 16 — but it is not this endpoint's, and it is not a hang.
   afterAll(async () => {
-    app.get<Redis>(REDIS).disconnect()
-    await app.get<Pool>(PG_POOL).end()
+    await app.close()
   })
 
   // ThrottlerGuard is a global APP_GUARD over Redis-backed storage: it runs
@@ -313,7 +306,57 @@ describe('GET /health with Redis unreachable', () => {
   // times out, and Liara learns nothing. The indicator bounds its own wait.
   it('bounds the redis probe instead of waiting out ioredis', async () => {
     const res = await app.inject({ method: 'GET', url: '/health/ready' })
-    expect(health(res).details.redis?.message).toContain('timed out')
+    expect(health(res).details.redis?.message).toBe(
+      `timeout of ${String(REDIS_PROBE_TIMEOUT_MS)}ms exceeded`,
+    )
+  })
+
+  it('logs no stack trace', async () => {
+    const res = await app.inject({ method: 'GET', url: '/health/ready' })
+    expect(res.statusCode).toBe(503)
+    expect(lines.filter((line) => line.includes('"stack"'))).toEqual([])
+    expect(lines.filter((line) => line.includes('ProblemFilter'))).toEqual([])
+  })
+})
+
+/**
+ * The other way a store stops answering, and the one `pg` has no defence
+ * against. A refused connection fails fast and hides this; a client that never
+ * comes free does not fail at all — `pg.Pool` has no `connectionTimeoutMillis`
+ * here, so the acquire simply waits. Measured on the network side too: `select
+ * 1` through a pool pointed at a blackholed address was still pending after
+ * 15 002 ms. Holding the only client reproduces the same unbounded wait with
+ * no network trickery, on any machine.
+ */
+describe('GET /health/ready with the Postgres pool exhausted', () => {
+  let app: NestFastifyApplication
+  let held: PoolClient
+
+  beforeAll(async () => {
+    app = await bootApp(configWith({ DATABASE_POOL_MAX: '1' }))
+    held = await app.get<Pool>(PG_POOL).connect()
+  })
+
+  beforeEach(() => {
+    lines.length = 0
+  })
+
+  afterAll(async () => {
+    held.release()
+    await app.close()
+  })
+
+  it('answers 503 rather than waiting for a client that is not coming', async () => {
+    const res = await app.inject({ method: 'GET', url: '/health/ready' })
+    expect(res.statusCode).toBe(503)
+    const body = health(res)
+    // Terminus's own timeout message, so this pins the ceiling firing rather
+    // than some other error that happens to arrive first.
+    const timedOut = `timeout of ${String(POSTGRES_PROBE_TIMEOUT_MS)}ms exceeded`
+    expect(body.details.postgres?.message).toBe(timedOut)
+    expect(body.details.outbox?.message).toBe(timedOut)
+    // Redis is on its own client and its own ceiling: unaffected.
+    expect(body.details.redis?.status).toBe('up')
   })
 
   it('logs no stack trace', async () => {

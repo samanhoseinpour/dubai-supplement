@@ -378,7 +378,11 @@ function childEnv(role: string, port: number): NodeJS.ProcessEnv {
     NODE_ENV: 'test',
     PROCESS_ROLE: role,
     PORT: String(port),
-    LOG_LEVEL: 'fatal',
+    // Not 'fatal', unlike the in-process suite: the child's streams are piped
+    // and only read back by the assertions below, so nothing reaches vitest's
+    // output, and the relay's start line — `first-deploy.md` §4's only check —
+    // is an info-level line that a silenced child would never write.
+    LOG_LEVEL: 'info',
     DATABASE_URL: env.DATABASE_URL,
     DATABASE_POOL_MAX: '5',
     REDIS_URL: env.REDIS_URL,
@@ -397,6 +401,8 @@ function childEnv(role: string, port: number): NodeJS.ProcessEnv {
 
 interface Entrypoint {
   readonly port: number
+  /** Everything the child has written to stdout and stderr so far. */
+  readonly logs: () => string
   /**
    * Always ends the child and always returns, saying which it took. Callers
    * put this in a `finally`, so it must not be the thing that hangs.
@@ -451,6 +457,7 @@ async function startMain(role: string): Promise<Entrypoint> {
 
   return {
     port,
+    logs: () => output,
     stop: async () => {
       child.kill('SIGTERM')
       if (await within(CHILD_TERM_MS, () => gone)) return 'terminated'
@@ -527,8 +534,13 @@ describe('PROCESS_ROLE in the compiled entrypoint', () => {
   }
 
   it('runs the relay inside the HTTP app under all', async () => {
-    await withEntrypoint('all', async (_main, aggregateId) => {
+    await withEntrypoint('all', async (main, aggregateId) => {
       expect(await within(CHILD_DELIVERY_MS, published(aggregateId))).toBe(true)
+      // And it said so. `docs/runbooks/first-deploy.md` §4 has the operator
+      // read this line out of `liara logs -a ds-api` to tell a container that
+      // is relaying from one that is not; without it the two boot logs are
+      // byte-identical and the runbook step cannot be performed.
+      expect(main.logs()).toContain('outbox relay started')
     })
   })
 
@@ -538,6 +550,12 @@ describe('PROCESS_ROLE in the compiled entrypoint', () => {
       // And it is a live server that declined the row, not a dead one.
       const res = await fetch(`http://127.0.0.1:${String(main.port)}/health/live`)
       expect(res.status).toBe(200)
+      // The other half of the runbook's check, and not a vacuous absence: the
+      // request just served is in this log at the same level the relay's line
+      // would be, and the `all` child above — same LOG_LEVEL, same childEnv —
+      // shows the line is written when there is a relay to announce.
+      expect(main.logs()).toContain('/health/live')
+      expect(main.logs()).not.toContain('outbox relay started')
     })
   })
 

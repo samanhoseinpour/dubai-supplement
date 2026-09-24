@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
 import { Logger } from '@nestjs/common'
 import type { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core'
 // The config barrel evaluates `ConfigModule`, whose `forRoot({ envFilePath:
@@ -43,6 +44,16 @@ const build = (): OutboxRelay =>
 const aCycle = (): RelayCycle => ({ processed: 0, failed: 0 })
 
 describe('OutboxRelay.start / stop', () => {
+  // Every start() below announces itself, so the spy is installed for the
+  // whole describe rather than in the one test that reads it — otherwise four
+  // tests that say nothing about logging would print through vitest's own
+  // output. `restoreAllMocks` in afterEach puts the method back.
+  let logged: MockInstance<typeof Logger.prototype.log>
+
+  beforeEach(() => {
+    logged = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined)
+  })
+
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
@@ -68,6 +79,27 @@ describe('OutboxRelay.start / stop', () => {
 
     await relay.stop()
     expect(vi.getTimerCount()).toBe(0)
+  })
+
+  // `first-deploy.md` §4 is the only guard the runbook has against a container
+  // that serves HTTP and relays nothing: AppModule is identical under every
+  // PROCESS_ROLE, so the boot log is otherwise byte-identical and an operator
+  // has nothing to look at. The line is the whole check, which is why it is
+  // asserted verbatim rather than by a substring.
+  it('announces itself once per start, so an operator can see the relay is on', async () => {
+    vi.useFakeTimers()
+    const relay = build()
+    vi.spyOn(relay, 'runOnce').mockResolvedValue(aCycle())
+
+    relay.start()
+    expect(logged).toHaveBeenCalledWith({ msg: 'outbox relay started', pollMs: POLL_MS })
+
+    // The idempotent second start() takes the early return, so it must not
+    // announce a relay it did not start.
+    relay.start()
+    expect(logged).toHaveBeenCalledTimes(1)
+
+    await relay.stop()
   })
 
   it('runs a cycle every OUTBOX_POLL_MS', async () => {

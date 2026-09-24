@@ -47,14 +47,25 @@ old and new containers overlap during a zero-downtime rollover.
 ## 4. The relay actually started
 
 `ds-api` runs with `PROCESS_ROLE=all`, which starts the HTTP app **and** the
-outbox relay in one process. Confirm the relay's start line in the logs:
+outbox relay in one process. Every role boots the same module graph, so the
+rest of the boot log is identical under `api` and under `all`; the relay's own
+start line, written once, is the only thing that tells them apart:
 
 ```sh
-liara logs -a ds-api -f
+liara logs -a ds-api | grep 'outbox relay started'
 ```
 
-No relay means domain events accumulate in `outbox_events` and nothing
-reacts — silently.
+Expected: exactly one line, from `OutboxRelay`, carrying the poll interval —
+
+```text
+{"level":30,"context":"OutboxRelay","msg":"outbox relay started","pollMs":1000}
+```
+
+(`time`, `pid` and `hostname` are elided above; `pollMs` is `OUTBOX_POLL_MS`.)
+
+No line means the container is serving HTTP and relaying nothing: domain
+events accumulate in `outbox_events` and nothing reacts — silently. Check
+`PROCESS_ROLE` and redeploy.
 
 ## 5. The API is not reachable from the internet
 

@@ -143,7 +143,18 @@ export class OutboxRelay implements OnModuleInit, OnApplicationShutdown {
     })
   }
 
-  /** Polls every OUTBOX_POLL_MS. Task 14 decides which roles call this. */
+  /**
+   * Polls every OUTBOX_POLL_MS. Task 16 decides which roles call this.
+   *
+   * The announcement is not decoration: AppModule is identical under every
+   * PROCESS_ROLE, so a container that serves HTTP and relays nothing boots to
+   * a byte-identical log. This line is the only thing that tells the two
+   * apart, and `docs/runbooks/first-deploy.md` §4 — the one check against
+   * events accumulating in `outbox_events` while nothing reacts — is that
+   * comparison. Logged after the interval exists, so it reports a fact, and
+   * below the idempotence guard, so a second start() does not announce a
+   * relay it did not start.
+   */
   start(): void {
     if (this.timer) return
     this.stopped = false
@@ -161,6 +172,7 @@ export class OutboxRelay implements OnModuleInit, OnApplicationShutdown {
       await this.inFlight
     }
     this.timer = setInterval(() => void tick(), this.config.outboxPollMs)
+    this.logger.log({ msg: 'outbox relay started', pollMs: this.config.outboxPollMs })
   }
 
   /**

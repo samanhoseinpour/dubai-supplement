@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
-import { createApp } from '../../src/app.factory.js'
+import { ProblemDetailsSchema } from '@ds/contracts'
+import { adapterOptions, BODY_LIMIT_BYTES, createApp } from '../../src/app.factory.js'
+import { AppConfig, validatedEnv } from '../../src/infra/config/index.js'
 
 /**
  * The production path: everything main.ts boots, short of listening. The
@@ -21,6 +23,19 @@ describe('createApp', () => {
       .getHttpAdapter()
       .getInstance()
       .get('/probe/ip', (req) => ({ ip: req.ip }))
+    // What `rawBody: true` produces, reported back: the option is invisible
+    // to every other assertion in the suite, and a request is the only thing
+    // that can tell whether Nest installed the parser that fills it.
+    app
+      .getHttpAdapter()
+      .getInstance()
+      .post('/probe/raw', (req) => {
+        const { rawBody } = req as { rawBody?: unknown }
+        return {
+          isBuffer: Buffer.isBuffer(rawBody),
+          text: Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : null,
+        }
+      })
     await app.init()
     await app.getHttpAdapter().getInstance().ready()
   })
@@ -70,5 +85,53 @@ describe('createApp', () => {
     // branches; here there is only the production one.
     const docs = await app.inject({ method: 'GET', url: '/docs' })
     expect(docs.statusCode).toBe(404)
+  })
+
+  /**
+   * Three lines of deliberate adapter policy (`.claude/rules/api.md`) that
+   * no request could distinguish from Fastify's own behaviour, and that were
+   * therefore deletable with `pnpm check` staying green: `bodyLimit`,
+   * `rawBody: true` and problem.filter.ts's 413 → VALIDATION_FAILED row.
+   *
+   * `bodyLimit` restates Fastify 5's default, so no request can prove the
+   * line exists — asserting a value identical to the library's own default
+   * is the `pool.max = 10` defect. What makes it ours is that the object the
+   * adapter is built from is asserted whole; the request below then proves
+   * that object is the one production runs on.
+   */
+  describe('the adapter policy', () => {
+    it('is the whole object the adapter is built from, defaults restated and all', () => {
+      expect(adapterOptions(new AppConfig(validatedEnv()))).toEqual({
+        logger: false,
+        trustProxy: 'loopback,uniquelocal',
+        bodyLimit: BODY_LIMIT_BYTES,
+      })
+      expect(BODY_LIMIT_BYTES).toBe(1_048_576)
+    })
+
+    it('keeps the raw body, and refuses one over the limit as a problem', async () => {
+      const kept = await app.inject({
+        method: 'POST',
+        url: '/probe/raw',
+        headers: { 'content-type': 'application/json' },
+        payload: '{"a":"ب"}',
+      })
+      expect(kept.statusCode).toBe(200)
+      // Bytes, not the parsed body: «ب» is two UTF-8 bytes and one character,
+      // so a handler verifying a webhook signature reads what was sent.
+      expect(JSON.parse(kept.payload)).toEqual({ isBuffer: true, text: '{"a":"ب"}' })
+
+      const tooLarge = await app.inject({
+        method: 'POST',
+        url: '/probe/raw',
+        headers: { 'content-type': 'application/json' },
+        payload: `"${'x'.repeat(BODY_LIMIT_BYTES)}"`,
+      })
+      expect(tooLarge.statusCode).toBe(413)
+      expect(tooLarge.headers['content-type']).toContain('application/problem+json')
+      expect(ProblemDetailsSchema.parse(JSON.parse(tooLarge.payload)).code).toBe(
+        'VALIDATION_FAILED',
+      )
+    })
   })
 })

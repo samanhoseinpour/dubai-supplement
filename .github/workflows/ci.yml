@@ -18,6 +18,12 @@ concurrency:
 jobs:
   check:
     if: github.event_name != 'schedule'
+    # The integration suite starts Postgres, Redis and RustFS through
+    # Testcontainers against the runner's own Docker daemon, so this job needs
+    # no `services:` block and never runs `pnpm db:up` — the containers are the
+    # suite's, created and destroyed per run. A wedged container would
+    # otherwise hold a runner for six hours; the whole check is minutes.
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

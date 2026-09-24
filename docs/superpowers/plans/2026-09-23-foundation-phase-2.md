@@ -3936,13 +3936,19 @@ Required effect: **every rule in the config is observed to fail, by name, agains
 
 **Every exception lives at the `src/` root, and there are exactly three:**
 
-| Import                                              | Verdict                                                                                                                                                                                       |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app.module.ts` → `./infra/health/health.module.js` | **Accidental.** `infra/health/` is the only `infra/*` directory with no `index.ts`. Task 15 owns the barrel.                                                                                  |
-| `migrate.ts` → `./infra/db/migration-lock.js`       | **Deliberate and load-bearing.** The reason is written in `migration-lock.ts`: the barrel carries `DbModule`, and with it `ConfigModule`, which validates the environment at decoration time. |
-| `migrate.ts` → `./infra/config/env.schema.js`       | **Deliberate**, same reason — `migrate.ts` needs the schema without booting the Nest graph.                                                                                                   |
+**Re-enumerated 2026-09-24, after Task 15 added the health barrel and its round-3 refactor moved a constant.** The one accident is gone; every survivor is deliberate, and they share a single cause.
 
-So the rule is not "no deep imports anywhere". It is "no deep import **between** `infra/*` directories", with the `src/` root entrypoints carrying a named allowance. Write it that way, or it fires on `migrate.ts` and the fix will be to weaken the rule rather than to keep the convention.
+| Import                                                  | Verdict                                                                                                                                                       |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~`app.module.ts` → `./infra/health/health.module.js`~~ | **Closed.** The only accident, and it existed only because `infra/health/` had no `index.ts`. Task 15 added the barrel; all eight `src/infra/*` now have one. |
+| `migrate.ts` → `./infra/config/env.schema.js`           | **Deliberate.** The schema, without booting the Nest graph.                                                                                                   |
+| `migrate.ts` → `./infra/db/migration-lock.js`           | **Deliberate and load-bearing.** The reason is written in `migration-lock.ts`.                                                                                |
+| `migrate.ts` → `./infra/db/connect-timeout.js`          | **Deliberate**, added by Task 15 round 3 — which followed `migration-lock.ts`'s precedent rather than inventing a second pattern.                             |
+| `migrate.test.ts` → `./infra/db/connect-timeout.js`     | Same, from the colocated unit test. `depcruise src` sees this file too.                                                                                       |
+
+The single cause behind all four survivors: **either barrel drags in `ConfigModule`, whose `forRoot` validates the environment the moment it is imported** — before `migrate.ts` has loaded its own `.env`. So each target is a leaf that imports nothing, and each leaf says so in its own header.
+
+So the rule is not "no deep imports anywhere". It is "no deep import **between** `infra/*` directories", with `src/migrate.ts` and its colocated test carrying a named allowance into `infra/db` and `infra/config` leaves. Write it that way, or it fires on `migrate.ts` and the fix will be to weaken the rule rather than to keep the convention.
 
 It is also the rule most likely to be broken next, precisely because it is invisible: the Task 14 brief shipped `import { AppConfig } from '../config/app-config.js'` in its own sample code.
 

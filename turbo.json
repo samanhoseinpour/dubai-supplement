@@ -87,7 +87,6 @@
         "OPENAPI_UI_ENABLED"
       ]
     },
-    "api#seed": { "dependsOn": ["build"], "cache": false },
     "@ds/api-client#generate": {
       "dependsOn": ["api#openapi"],
       "outputs": ["src/generated/**"]

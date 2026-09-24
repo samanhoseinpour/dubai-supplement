@@ -8,10 +8,9 @@ Router storefront (`apps/web`), in a pnpm + Turborepo monorepo.
 
 | Command                 | Does                                                |
 | ----------------------- | --------------------------------------------------- |
-| `pnpm dev`              | api on 3001, web on 3000                            |
+| `pnpm dev`              | api on 3001 (web arrives in Phase 3)                |
 | `pnpm db:up`            | Postgres, Redis, RustFS, Mailpit via compose        |
 | `pnpm db:migrate`       | apply SQL migrations                                |
-| `pnpm db:seed`          | seed the catalogue                                  |
 | `pnpm openapi:generate` | regenerate `openapi.json` and the typed client      |
 | `pnpm check`            | **the** verification command — end every task green |
 

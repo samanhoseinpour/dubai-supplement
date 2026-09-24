@@ -31,7 +31,6 @@
     "db:down": "docker compose -f infra/compose.yaml down",
     "db:generate": "pnpm --filter api exec drizzle-kit generate",
     "db:migrate": "pnpm --filter api exec tsx src/migrate.ts",
-    "db:seed": "turbo run seed --filter=api --output-logs=errors-only",
     "openapi:generate": "turbo run generate --filter=@ds/api-client"
   },
   "devDependencies": {

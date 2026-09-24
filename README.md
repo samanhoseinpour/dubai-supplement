@@ -3,8 +3,12 @@
 A Persian-language (fa-IR, right-to-left) e-commerce storefront for gym and
 fitness supplements.
 
-> **Status: foundation.** The repository, toolchain, quality gates and
-> documentation system exist. Product features do not yet.
+> **Status: foundation.** The repository, toolchain, quality gates,
+> documentation system and the API's foundation exist — configuration,
+> migrations, health probes, the transactional outbox, Redis and object
+> storage. No product feature does: the catalogue and the storefront arrive
+> in Phase 3. The table below is the chosen stack, not a list of what is
+> built.
 
 ## Stack
 
@@ -29,12 +33,16 @@ fitness supplements.
 ## Quickstart
 
 ```sh
-pnpm install     # installs dependencies and the git hooks
-pnpm db:up       # Postgres, Redis, object storage, mail catcher
+pnpm install                            # dependencies and the git hooks
+cp apps/api/.env.example apps/api/.env  # schema-valid localhost values
+pnpm db:up                              # Postgres, Redis, object storage, mail catcher
 pnpm db:migrate
-pnpm db:seed
-pnpm dev         # api on :3001, storefront on :3000
+pnpm dev                                # api on :3001
 ```
+
+The API refuses to boot on an invalid environment, so the copy is not
+optional. There is nothing to seed and no storefront to serve yet; both
+arrive with the catalogue in Phase 3.
 
 Verify everything with one command:
 
@@ -46,9 +54,9 @@ pnpm check
 
 | Path        | Contains                                                  |
 | ----------- | --------------------------------------------------------- |
-| `apps/api`  | NestJS API (arrives in Phase 2)                           |
-| `apps/web`  | Next.js storefront (Phase 3)                              |
-| `packages/` | Shared contracts, Persian utilities, API client, configs  |
+| `apps/api`  | NestJS API — config, migrations, health, outbox, storage  |
+| `apps/web`  | Next.js storefront — Phase 3, not in the tree yet         |
+| `packages/` | Shared contracts, Persian utilities, shared configs       |
 | `infra/`    | Local compose stack, Dockerfiles, deploy manifests        |
 | `docs/`     | Architecture, decisions, glossary, runbooks, specs, plans |
 | `scripts/`  | Repository checks run by `pnpm check` and the git hooks   |

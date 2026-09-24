@@ -60,5 +60,15 @@ describe('createApp', () => {
     const nope = await app.inject({ method: 'GET', url: '/nope' })
     expect(nope.statusCode).toBe(404)
     expect(nope.headers['content-type']).toContain('application/problem+json')
+
+    // And the graph this file claims to exercise is the one production
+    // boots: no Swagger UI. OPENAPI_UI_ENABLED is pinned false by
+    // vitest.integration.config.ts's `env` for the same reason TRUST_PROXY
+    // is — unpinned, `.env.example` sets it true, so the factory registered
+    // SwaggerModule on a developer's machine and not in CI, and this file
+    // silently exercised two different graphs. openapi-ui.test.ts owns both
+    // branches; here there is only the production one.
+    const docs = await app.inject({ method: 'GET', url: '/docs' })
+    expect(docs.statusCode).toBe(404)
   })
 })

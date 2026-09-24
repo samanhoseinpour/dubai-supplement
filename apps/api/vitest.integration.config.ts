@@ -17,8 +17,18 @@ export default defineConfig({
     // value the containers do not own gets pinned and the developer's own
     // apps/api/.env stops deciding anything. LOG_LEVEL keeps the run's
     // output vitest's own; TRUST_PROXY is the list app.factory.test.ts
-    // asserts the adapter trusts. Nothing the global setup writes may be
-    // named here — this object wins over it.
-    env: { LOG_LEVEL: 'fatal', TRUST_PROXY: 'loopback,uniquelocal' },
+    // asserts the adapter trusts; OPENAPI_UI_ENABLED is production's value,
+    // so app.factory.test.ts exercises production's graph rather than one
+    // decided by whoever copied .env.example (which sets it true) — it used
+    // to register the Swagger UI on a developer's machine and not in CI.
+    // openapi-ui.test.ts still reaches both branches: vi.stubEnv writes
+    // process.env directly, and ConfigModule merges `{ ...file, ...env }`.
+    // Nothing the global setup writes may be named here — this object wins
+    // over it.
+    env: {
+      LOG_LEVEL: 'fatal',
+      TRUST_PROXY: 'loopback,uniquelocal',
+      OPENAPI_UI_ENABLED: 'false',
+    },
   },
 })

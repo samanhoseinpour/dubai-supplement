@@ -7,7 +7,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "*.tsbuildinfo"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "*.tsbuildinfo"],
+      "env": ["NEXT_PUBLIC_SITE_URL", "API_INTERNAL_URL"]
     },
     "dev": { "dependsOn": ["^build"], "persistent": true, "cache": false },
     "lint": { "dependsOn": ["^build"] },

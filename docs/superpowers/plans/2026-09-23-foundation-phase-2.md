@@ -3475,7 +3475,7 @@ import { Test } from '@nestjs/testing'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { AppModule } from '../../src/app.module.js'
 import { DRIZZLE, type Db } from '../../src/infra/db/index.js'
-import { outboxEvents } from '../../src/infra/outbox/index.js'
+import { MAX_ATTEMPTS, outboxEvents } from '../../src/infra/outbox/index.js'
 import { truncateAll } from '../setup/truncate.js'
 
 describe('GET /health/ready', () => {
@@ -3535,6 +3535,24 @@ describe('GET /health/ready', () => {
       eventType: 'test.thing.pending',
       payload: {},
       attempts: 1,
+    })
+    const res = await app.inject({ method: 'GET', url: '/health/ready' })
+    expect(JSON.parse(res.payload).details.outbox.dead).toBe(0)
+  })
+
+  // Added 2026-09-24. Without this row, deleting `isNull(outboxEvents.publishedAt)`
+  // from the indicator's WHERE breaks NO test above: nothing else in this file
+  // is both published AND at the attempt ceiling. An event that failed its way
+  // to five attempts and was then republished would be counted dead forever,
+  // and `/health/ready` would report a backlog that does not exist.
+  it('stops counting a parked row once it is published', async () => {
+    await db.insert(outboxEvents).values({
+      aggregateType: 'thing',
+      aggregateId: '0199f3c0-3333-7000-8000-000000000000',
+      eventType: 'test.thing.recovered',
+      payload: {},
+      attempts: MAX_ATTEMPTS,
+      publishedAt: new Date(),
     })
     const res = await app.inject({ method: 'GET', url: '/health/ready' })
     expect(JSON.parse(res.payload).details.outbox.dead).toBe(0)

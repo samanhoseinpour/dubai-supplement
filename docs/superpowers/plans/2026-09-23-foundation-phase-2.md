@@ -3455,6 +3455,7 @@ git commit -m "feat(api): add the Redis key-value and S3 storage ports"
 **Files:**
 
 - Modify: `apps/api/src/infra/health/health.controller.ts`, `health.module.ts`
+- Create: `apps/api/src/infra/health/index.ts` — **added 2026-09-24.** `infra/health/` is the only `infra/*` directory with no barrel, which is why `app.module.ts:7` reaches straight for `./infra/health/health.module.js`. Task 14 found it and correctly left it alone, since this task rewrites the module anyway; Task 17 turns the convention into a failing build, so it has to be closed here. Re-exports only, and `app.module.ts` switches to the barrel.
 - Create: `apps/api/src/infra/health/postgres.indicator.ts`, `redis.indicator.ts`, `outbox.indicator.ts`, and the controller-scoped filter Step 5 rules for
 - Test: `apps/api/test/integration/health-ready.test.ts`
 
@@ -3895,7 +3896,19 @@ Required effect: **every rule in the config is observed to fail, by name, agains
 
 - [ ] **Step 3: Enforce the barrel convention — the one live rule nothing checks**
 
-**Added 2026-09-24 by measurement.** Every `infra/<dir>` in `apps/api/src` is reached from outside that directory only through its `index.js`, and I checked the whole of `src`: there are **zero** deep imports. `outbox.relay.ts`, `logger.module.ts`, `db.module.ts`, `drizzle.provider.ts`, `http/problem.filter.ts` and `http/security.ts` all take `AppConfig`/`Env`/`Db` from `'../config/index.js'` or `'../db/index.js'`. Thirteen tasks have held that line by hand and nothing enforces it.
+**Added 2026-09-24 by measurement, and corrected the same day — the first version of this paragraph claimed zero deep imports, which is false. The grep behind it required a leading `../` and so could not see any `./`-prefixed import at all.** What is actually true, and it is the more useful statement:
+
+**Between `infra/*` directories, the barrel holds without exception.** `outbox.relay.ts`, `logger.module.ts`, `db.module.ts`, `drizzle.provider.ts`, `http/problem.filter.ts` and `http/security.ts` all take `AppConfig`/`Env`/`Db` from `'../config/index.js'` or `'../db/index.js'`. Thirteen tasks held that line by hand and nothing enforces it.
+
+**Every exception lives at the `src/` root, and there are exactly three:**
+
+| Import                                              | Verdict                                                                                                                                                                                       |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.module.ts` → `./infra/health/health.module.js` | **Accidental.** `infra/health/` is the only `infra/*` directory with no `index.ts`. Task 15 owns the barrel.                                                                                  |
+| `migrate.ts` → `./infra/db/migration-lock.js`       | **Deliberate and load-bearing.** The reason is written in `migration-lock.ts`: the barrel carries `DbModule`, and with it `ConfigModule`, which validates the environment at decoration time. |
+| `migrate.ts` → `./infra/config/env.schema.js`       | **Deliberate**, same reason — `migrate.ts` needs the schema without booting the Nest graph.                                                                                                   |
+
+So the rule is not "no deep imports anywhere". It is "no deep import **between** `infra/*` directories", with the `src/` root entrypoints carrying a named allowance. Write it that way, or it fires on `migrate.ts` and the fix will be to weaken the rule rather than to keep the convention.
 
 It is also the rule most likely to be broken next, precisely because it is invisible: the Task 14 brief shipped `import { AppConfig } from '../config/app-config.js'` in its own sample code.
 

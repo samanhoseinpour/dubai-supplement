@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { HealthIndicatorService, type HealthCheckAttempt } from '@nestjs/terminus'
 import { sql } from 'drizzle-orm'
 import { DRIZZLE, type Db } from '../db/index.js'
+import { unwrapDriverError } from './driver-error.js'
 import { POSTGRES_PROBE_TIMEOUT_MS } from './probe-timeout.js'
 
 /**
@@ -25,7 +26,11 @@ export class PostgresIndicator {
     return this.health
       .check('postgres')
       .attempt(async () => {
-        await this.db.execute(sql`select 1`)
+        try {
+          await this.db.execute(sql`select 1`)
+        } catch (error) {
+          throw unwrapDriverError(error)
+        }
       })
       .withTimeout(POSTGRES_PROBE_TIMEOUT_MS)
   }

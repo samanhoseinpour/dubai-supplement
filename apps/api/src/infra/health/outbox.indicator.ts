@@ -3,6 +3,7 @@ import { HealthIndicatorService, type HealthCheckAttempt } from '@nestjs/terminu
 import { and, count, gte, isNull } from 'drizzle-orm'
 import { DRIZZLE, type Db } from '../db/index.js'
 import { MAX_ATTEMPTS, outboxEvents } from '../outbox/index.js'
+import { unwrapDriverError } from './driver-error.js'
 import { POSTGRES_PROBE_TIMEOUT_MS } from './probe-timeout.js'
 
 /**
@@ -30,11 +31,15 @@ export class OutboxIndicator {
     return this.health
       .check('outbox')
       .attempt(async () => {
-        const [row] = await this.db
-          .select({ dead: count() })
-          .from(outboxEvents)
-          .where(and(isNull(outboxEvents.publishedAt), gte(outboxEvents.attempts, MAX_ATTEMPTS)))
-        return { dead: row?.dead ?? 0 }
+        try {
+          const [row] = await this.db
+            .select({ dead: count() })
+            .from(outboxEvents)
+            .where(and(isNull(outboxEvents.publishedAt), gte(outboxEvents.attempts, MAX_ATTEMPTS)))
+          return { dead: row?.dead ?? 0 }
+        } catch (error) {
+          throw unwrapDriverError(error)
+        }
       })
       .withTimeout(POSTGRES_PROBE_TIMEOUT_MS)
   }

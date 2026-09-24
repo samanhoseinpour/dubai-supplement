@@ -50,11 +50,46 @@ describe('DbModule', () => {
 
   // src/openapi.ts boots the app in CI with no service containers (§5.5):
   // building the module must not open a connection. The first query does.
+  // Still true with connectionTimeoutMillis set, which is the property that
+  // would break silently if the option ever made the pool connect eagerly.
   it('opens no connection until the first query', async () => {
     const app = await bootDb()
     try {
       expect(app.get<Pool>(PG_POOL).totalCount).toBe(0)
     } finally {
+      await app.close()
+    }
+  })
+
+  // Without `connectionTimeoutMillis`, pg-pool 3.14.0 pushes the waiter onto
+  // `_pendingQueue` with no timer at all (index.js:206-209) — a request whose
+  // client never comes free waits forever, and no health check can rescue it
+  // because the handlers already in flight can never fail. With the option,
+  // both the queue wait and establishing a socket are bounded. Holding the
+  // only client reproduces the first without touching the network.
+  it('bounds the wait for a client rather than queueing forever', async () => {
+    const app = await bootDb(1)
+    const pool = app.get<Pool>(PG_POOL)
+    const held = await pool.connect()
+    try {
+      const started = Date.now()
+      const failure: unknown = await app
+        .get<Db>(DRIZZLE)
+        .execute(sql`select 1`)
+        .then(
+          () => undefined,
+          (error: unknown) => error,
+        )
+      expect(failure).toBeInstanceOf(Error)
+      // pg's own words for the queue-wait path, so this cannot pass on some
+      // other failure that happens to arrive first.
+      expect((failure as Error).cause).toMatchObject({
+        message: 'timeout exceeded when trying to connect',
+      })
+      // And it is the pool's bound that fired, not a test timeout.
+      expect(Date.now() - started).toBeLessThan(10_000)
+    } finally {
+      held.release()
       await app.close()
     }
   })

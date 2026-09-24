@@ -3745,7 +3745,9 @@ describe('PROCESS_ROLE', () => {
     // pattern in test/integration/db.test.ts) plus a CONDITION WAIT — poll until
     // published, with a deadline — before and after stop(). A fixed sleep is what
     // .claude/rules/testing.md bans; a condition wait is not.
-    await expect(app.close()).resolves.toBeUndefined()
+    // The assertions for (a), (b) and (c) are deliberately NOT written out
+    // here. Spelling them would pick your mechanism for you a third time, and
+    // that is the mistake this comment exists to stop repeating.
     app = undefined
   })
 
@@ -3755,6 +3757,16 @@ describe('PROCESS_ROLE', () => {
   })
 })
 ```
+
+**How this task is judged done, since the block above stops short on purpose.** Properties (a), (b) and (c) get **three separately named tests**, not one test with three assertions — a reviewer has to be able to see which property is covered and which is not. Then prove each one bites, by removing its guard from `OutboxRelay` one at a time and recording what fails:
+
+| Remove from `OutboxRelay`                        | The test that must go red                                |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| `clearInterval(this.timer)` in `stop()`          | (a)                                                      |
+| `await this.inFlight` in `stop()`                | (b) — **measured 2026-09-24: today this breaks nothing** |
+| `await this.stop()` in `onApplicationShutdown()` | (c)                                                      |
+
+Paste the three failures into your report. A property whose mutation leaves the suite green is not pinned, whatever the test is named — that is exactly how (b) survived Task 13 with four passing tests over it.
 
 - [ ] **Step 2: Run it and watch it fail, then implement**
 

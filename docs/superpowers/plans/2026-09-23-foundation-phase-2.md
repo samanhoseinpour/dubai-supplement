@@ -2223,18 +2223,24 @@ if (config.openapiUiEnabled) {
 }
 ```
 
-**Helmet's default CSP blocks the Swagger UI.** `registerSecurity` registers
-`@fastify/helmet` with no options, so `helmet@8.3.0`'s defaults are live on every
-route. Three directives conflict: `img-src 'self' data:` blocks the
-`validator.swagger.io` badge, `script-src 'self'` plus `script-src-attr 'none'`
-block the UI's inline bootstrap, and `default-src 'self'` governs `connect-src`,
-confining "Try it out" to the same origin. Pass an explicit
-`contentSecurityPolicy` to `app.register(helmet, …)` inside `registerSecurity`,
-**gated on `config.openapiUiEnabled`** — which `registerSecurity` already has in
-hand, so no signature change is needed. It must **not** relax CSP when the UI is
-off, and a test must assert `content-security-policy` differs between the two
-config states. Confirm which directive actually fires against
-`@nestjs/swagger` 12.0.1's real page rather than assuming this list is complete.
+**Helmet's default CSP does NOT block the Swagger UI — corrected 2026-09-24 by
+measurement.** An earlier revision of this step required relaxing CSP, reasoning
+statically from `helmet@8.3.0`'s defaults that `img-src 'self' data:` would block
+the `validator.swagger.io` badge and `script-src 'self'`/`script-src-attr 'none'`
+would block an inline bootstrap. That reasoning was wrong about the real page.
+Measured against `@nestjs/swagger` 12.0.1 + `swagger-ui-dist` 5.32.14 under the
+exact default header, in headless Chrome over CDP: **zero refusals, zero
+violation reports**, with a `script-src 'none'` positive control firing to prove
+the harness worked. The page loads `swagger-ui-init.js` as an external
+same-origin file rather than inline, and Nest inlines the spec, which suppresses
+the validator badge entirely.
+
+**So do not relax CSP.** Relaxing it would weaken every route's headers to buy
+nothing. Step 6 is the gated `SwaggerModule.setup` call plus a test that `/docs`
+answers **200 under the real `registerSecurity` headers** when
+`OPENAPI_UI_ENABLED` is true and **404** when it is false. That test is the
+durable guard: if a future `swagger-ui-dist` introduces an inline script, CSP
+will start blocking it and the 200 assertion is what catches it.
 
 - [ ] **Step 7: Generate, commit the artefact, verify**
 

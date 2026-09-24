@@ -1,3 +1,4 @@
 * text=auto eol=lf
 *.sh text eol=lf
 pnpm-lock.yaml -diff -merge linguist-generated=true
+*.woff2 binary

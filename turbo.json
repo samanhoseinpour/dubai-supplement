@@ -87,6 +87,14 @@
         "OPENAPI_UI_ENABLED"
       ]
     },
+    "budget": { "dependsOn": ["build"], "outputs": [] },
+    "web#test": { "dependsOn": ["^build"], "env": ["NODE_ENV"] },
+    "web#e2e": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "env": ["NODE_ENV", "PORT", "API_INTERNAL_URL", "NEXT_PUBLIC_SITE_URL"],
+      "passThroughEnv": ["CI", "HOME", "PLAYWRIGHT_BROWSERS_PATH"]
+    },
     "@ds/api-client#generate": {
       "dependsOn": ["api#openapi"],
       "outputs": ["src/generated/**"]

@@ -3694,7 +3694,21 @@ describe('PROCESS_ROLE', () => {
     // close() triggers onApplicationShutdown, which awaits stop(). If the
     // interval were left running, the pool would close underneath it and
     // the process would not exit.
-    // Amended 2026-09-24: `resolves.toBeUndefined()` on its own is vacuous here —
+    // Amended 2026-09-24 (twice). THREE distinct properties need pinning here,
+    // and the obvious assertion pins none of them:
+    //   (a) the interval is cleared — a no-op stop() leaves it running;
+    //   (b) stop() does not RESOLVE before the in-flight cycle does, which is
+    //       what "SIGTERM must not cut a cycle in half" actually means;
+    //   (c) close() awaits stop() rather than merely resolving alongside it.
+    // Deleting `await this.inFlight` from OutboxRelay.stop() was measured against
+    // the Task 13 unit suite and broke NOTHING — so (b) is unpinned today, and a
+    // timer-count assertion alone will not pin it either: a stop() that clears the
+    // interval and returns immediately looks identical to a correct one. Pin (b)
+    // with a stubbed runOnce returning a promise you control: start, advance the
+    // timer to begin a cycle, call stop(), assert it is still pending, then resolve
+    // the cycle and assert stop() resolves after it.
+    //
+    // First amendment, still required: `resolves.toBeUndefined()` on its own is vacuous —
     // close() resolves whether or not the interval was cleared, and a leaked
     // interval's next tick rejects on the ended pool straight into OutboxRelay's
     // own catch, so nothing surfaces. Assert EVIDENCE THE TIMER STOPPED: either

@@ -79,6 +79,24 @@ const CHILD_DELIVERY_MS = 10_000
  */
 const CHILD_SILENCE_MS = 2_000
 
+/**
+ * How long a spawned entrypoint gets to honour SIGTERM before it is killed.
+ *
+ * SIGTERM is a request, not a guarantee: a shutdown hook that never resolves
+ * leaves Nest's signal handler awaiting `app.close()` and the process alive
+ * forever — the hazard recorded beside `RedisCloser`'s `disconnect()`, and
+ * reproducible by injecting it. Without an escalation the harness inherits
+ * that hang: the test dies on vitest's own 60 s timeout inside `finally`, the
+ * cleanup after `stop()` never runs, and the child outlives the whole run
+ * holding its port, where it presents later as an unrelated failure.
+ *
+ * Five seconds because a graceful exit is nothing like that: 22 ms and 28 ms
+ * measured on the real entrypoint, and the slowest leg of shutdown is now
+ * bounded at `REDIS_QUIT_TIMEOUT_MS`. A child still alive after this is
+ * wedged, not slow — and `stop()` says which happened rather than hiding it.
+ */
+const CHILD_TERM_MS = 5_000
+
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -379,7 +397,11 @@ function childEnv(role: string, port: number): NodeJS.ProcessEnv {
 
 interface Entrypoint {
   readonly port: number
-  stop: () => Promise<void>
+  /**
+   * Always ends the child and always returns, saying which it took. Callers
+   * put this in a `finally`, so it must not be the thing that hangs.
+   */
+  stop: () => Promise<'terminated' | 'killed'>
 }
 
 /**
@@ -402,8 +424,10 @@ async function startMain(role: string): Promise<Entrypoint> {
   child.stderr.on('data', (chunk: Buffer) => {
     output += chunk.toString()
   })
+  let gone = false
   const exited = new Promise<void>((resolve) => {
     child.on('exit', () => {
+      gone = true
       resolve()
     })
   })
@@ -429,7 +453,12 @@ async function startMain(role: string): Promise<Entrypoint> {
     port,
     stop: async () => {
       child.kill('SIGTERM')
+      if (await within(CHILD_TERM_MS, () => gone)) return 'terminated'
+      // SIGKILL cannot be handled, so this is the branch that guarantees both
+      // halves of the contract: the child dies and this returns.
+      child.kill('SIGKILL')
       await exited
+      return 'killed'
     },
   }
 }
@@ -475,29 +504,54 @@ describe('PROCESS_ROLE in the compiled entrypoint', () => {
     return row !== undefined && row.publishedAt !== null
   }
 
-  it('runs the relay inside the HTTP app under all', async () => {
+  /**
+   * One seeded row and one running entrypoint, each cleaned up whichever of
+   * them fails. Seeding inside the outer `try` is the point: a `startMain`
+   * that throws used to kill the child and leave the row in the table.
+   */
+  async function withEntrypoint(
+    role: string,
+    body: (main: Entrypoint, aggregateId: string) => Promise<void>,
+  ): Promise<void> {
     const aggregateId = await seedEvent()
-    const main = await startMain('all')
     try {
-      expect(await within(CHILD_DELIVERY_MS, published(aggregateId))).toBe(true)
+      const main = await startMain(role)
+      try {
+        await body(main, aggregateId)
+      } finally {
+        await main.stop()
+      }
     } finally {
-      await main.stop()
       await db.delete(outboxEvents).where(eq(outboxEvents.aggregateId, aggregateId))
     }
+  }
+
+  it('runs the relay inside the HTTP app under all', async () => {
+    await withEntrypoint('all', async (_main, aggregateId) => {
+      expect(await within(CHILD_DELIVERY_MS, published(aggregateId))).toBe(true)
+    })
   })
 
   it('serves HTTP and leaves the relay stopped under api', async () => {
-    const aggregateId = await seedEvent()
-    const main = await startMain('api')
-    try {
+    await withEntrypoint('api', async (main, aggregateId) => {
       expect(await within(CHILD_SILENCE_MS, published(aggregateId))).toBe(false)
       // And it is a live server that declined the row, not a dead one.
       const res = await fetch(`http://127.0.0.1:${String(main.port)}/health/live`)
       expect(res.status).toBe(200)
-    } finally {
-      await main.stop()
-      await db.delete(outboxEvents).where(eq(outboxEvents.aggregateId, aggregateId))
-    }
+    })
+  })
+
+  // §5.2 asks that SIGTERM drain rather than cut, and everything above is
+  // written to survive an entrypoint that ignores it — `stop()` escalates to
+  // SIGKILL so a wedged child cannot leak past the run. That escalation must
+  // not also be able to hide the regression, so this is the one place it is
+  // read: a shutdown hook that never resolves reads 'killed' here instead of
+  // quietly costing every other test five seconds.
+  it('honours SIGTERM rather than having to be killed', async () => {
+    const main = await startMain('all')
+    // No cleanup needed on failure: stop() has already ended the child either
+    // way, which is exactly what is being asserted.
+    expect(await main.stop()).toBe('terminated')
   })
 })
 

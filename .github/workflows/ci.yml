@@ -25,10 +25,31 @@ jobs:
     # otherwise hold a runner for six hours; the whole check is minutes.
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    env:
+      # Read here rather than only in the step below, because a step's `if:`
+      # cannot see an `env:` the same step declares.
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      # Testcontainers pulls postgres:16, redis:7.2-alpine, rustfs and ryuk on
+      # every run. Anonymous Docker Hub pulls are rate-limited per IP, and a
+      # hosted runner's IP is shared with every other job on it, so the limit
+      # can be spent before this job starts and `timeout-minutes` would not
+      # catch it — a TOOMANYREQUESTS is a fast failure, not a hang.
+      # Authenticated pulls count against the account instead.
+      #
+      # Skipped when the secret is absent: this repository is public, and a
+      # pull request from a fork cannot read repository secrets. Falling back
+      # to an anonymous pull is worse than authenticating and better than
+      # failing the job on an empty username.
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v5
         with:

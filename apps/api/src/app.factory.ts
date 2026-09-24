@@ -30,10 +30,21 @@ interface AdapterOptions {
 
 /**
  * Every adapter option in one place (`.claude/rules/api.md`), and in one
- * object so a test can assert all of it at once. A value that restates a
- * library default cannot be proven by any request — that is the `pool.max`
- * defect — so the policy is asserted as the object the adapter is built
- * from, and a request then proves this object is the one production runs on.
+ * object so a test can assert all of it at once.
+ *
+ * Be precise about what that buys, because an earlier version of this comment
+ * was not. `trustProxy` and `rawBody` change what a request does, so requests
+ * tie them to the running app. `bodyLimit` does not: 1 MiB **is** Fastify's
+ * own default, so no request can distinguish setting it from omitting it —
+ * that is the `pool.max` defect, where an assertion matching the library's
+ * default passes against code that ignores its configuration.
+ *
+ * Measured, not assumed: building production's adapter from a literal with no
+ * `bodyLimit` leaves the whole integration suite green, 18 files and 127
+ * tests. So this object is what guards the line — deleting it fails the
+ * whole-object assertion — and the line's presence in the *running* adapter
+ * is not provable by request while the value equals the default. Making it
+ * provable needs a deliberate rewrite, not a cleverer assertion.
  */
 export function adapterOptions(config: AppConfig): AdapterOptions {
   return {

@@ -2207,7 +2207,9 @@ await writeFile(target, `${JSON.stringify(buildDocument(app), null, 2)}\n`, 'utf
 await app.close()
 ```
 
-Add to `apps/api/package.json` scripts: `"openapi": "node dist/openapi.js"`, and dependencies `"@nestjs/swagger": "catalog:"`, `"zod-openapi": "catalog:"`.
+Add to `apps/api/package.json` scripts: `"openapi": "node dist/openapi.js"`, and the dependency `"@nestjs/swagger": "catalog:"`.
+
+> **Corrected 2026-09-24 (final fix pass).** This step originally also added `"zod-openapi": "catalog:"`. Nothing ever imported it — `@nestjs/swagger` 12 carries its own converter — so the catalog pin was removed and following this line as written would now fail to resolve. See the deferral note in **Phase 2 completion**.
 
 - [ ] **Step 6: Serve the UI only in development**
 
@@ -2454,7 +2456,9 @@ try {
 
 Add to `apps/api/package.json`: dependencies `drizzle-orm`, `pg`; devDependencies `drizzle-kit`, `@types/pg`, `tsx` — all `catalog:`.
 
-- [ ] **Step 6: Add `src/shared/ids.ts`**
+- [ ] **Step 6: Add `src/shared/ids.ts`** — **withdrawn 2026-09-24 (final fix pass). Do not build this.**
+
+> `newId()` was built, shipped, and then removed: nothing in Phase 2 mints a UUID primary key (`outbox_events.id` is a bigint identity and `aggregate_id` comes from the caller), so it had no importer outside its own test and was the sole consumer of the `uuid` dependency. Giving it a consumer would have meant manufacturing one, which is worse than dead code because it reads as use. `uuid` is re-pinned by the commit that first imports it, and ADR-0004 still decides the question. The steps below are kept for the record; skip to Step 7.
 
 §6.3 and ADR-0004: primary keys are `uuid` holding a **UUIDv7 generated in application code**, because PostgreSQL 16 has no native `uuidv7()`. Every module needs this, so it is a shared leaf rather than a module concern.
 

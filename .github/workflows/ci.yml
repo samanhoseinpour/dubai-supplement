@@ -26,9 +26,12 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     env:
-      # Read here rather than only in the step below, because a step's `if:`
-      # cannot see an `env:` the same step declares.
+      # Hoisted here rather than onto the step, for two independent reasons:
+      # `secrets` is not an available context in a step's `if:` at all, and a
+      # step's own `env:` is not in scope for that same step's `if:`. A job
+      # `env` is, so this is the only indirection that works.
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -44,8 +47,13 @@ jobs:
       # pull request from a fork cannot read repository secrets. Falling back
       # to an anonymous pull is worse than authenticating and better than
       # failing the job on an empty username.
+      #
+      # Both are checked, not just the username: a set-but-empty or expired
+      # token would otherwise fail this step and take the whole job red — a
+      # worse outcome than the anonymous pull the guard exists to preserve,
+      # and one that reads as a broken branch rather than a missing secret.
       - name: Log in to Docker Hub
-        if: env.DOCKERHUB_USERNAME != ''
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}

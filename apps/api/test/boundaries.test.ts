@@ -161,6 +161,7 @@ describe('eslint-plugin-boundaries', () => {
  * linting rather than by reading the config back.
  */
 describe('eslint-plugin-boundaries actually reports', () => {
+  const LINT_TIMEOUT_MS = 60_000
   const eslint = new ESLint({ cwd: apiDir })
 
   // Real paths with substituted content: the config ESLint resolves is the one
@@ -188,17 +189,31 @@ describe('eslint-plugin-boundaries actually reports', () => {
       'test/integration/health.test.ts',
       "import { DRIZZLE } from '../../src/infra/db/drizzle.provider.js'\nexport const probe = DRIZZLE\n",
     ],
-  ])('reports infra-barrel on a deep import %s', async (_label, relativeFile, code) => {
-    const messages = await boundaryErrors(relativeFile, code)
-    expect(messages).toHaveLength(1)
-    expect(messages[0]).toMatch(/^infra-barrel:/)
-  })
+  ])(
+    'reports infra-barrel on a deep import %s',
+    async (_label, relativeFile, code) => {
+      const messages = await boundaryErrors(relativeFile, code)
+      expect(messages).toHaveLength(1)
+      expect(messages[0]).toMatch(/^infra-barrel:/)
+    },
+    // The first lintText builds the type-aware program `projectService` needs,
+    // which dominates this block: ~2 s on a developer machine and past
+    // vitest's 5 s default on CI's 2-vCPU runner, where it failed. The budget
+    // is deliberately far above the cost rather than just over it — a timeout
+    // tuned to the observed number turns a slow runner into a red build, and
+    // this assertion has nothing to say about speed.
+    LINT_TIMEOUT_MS,
+  )
 
-  it('stays silent on the barrel import it exists to permit', async () => {
-    const messages = await boundaryErrors(
-      'src/infra/http/security.ts',
-      "import { DRIZZLE } from '../db/index.js'\nexport const probe = DRIZZLE\n",
-    )
-    expect(messages).toEqual([])
-  })
+  it(
+    'stays silent on the barrel import it exists to permit',
+    async () => {
+      const messages = await boundaryErrors(
+        'src/infra/http/security.ts',
+        "import { DRIZZLE } from '../db/index.js'\nexport const probe = DRIZZLE\n",
+      )
+      expect(messages).toEqual([])
+    },
+    LINT_TIMEOUT_MS,
+  )
 })

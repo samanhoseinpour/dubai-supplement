@@ -24,5 +24,18 @@ regexes = [
 paths = ['''\.env\.example$''', '''^docs/''']
 
 [allowlist]
-description = "Committed placeholder files never hold real values"
+description = "Committed placeholder files never hold real values, and the compose stack's own credential is one"
 paths = ['''\.env\.example$''', '''pnpm-lock\.yaml$''']
+# Matched against the whole line, not the extracted secret, so this does not
+# depend on which span the default `curl-auth-user` rule happens to capture.
+#
+# `infra/compose.yaml` creates the dev bucket with a SigV4-signed curl, and
+# `--user <id>:<secret>` is a credential-on-a-command-line shape the rule is
+# right to flag. The pair is `rustfsadmin:rustfsadmin` — the documented local
+# value from spec Appendix B, bound to 127.0.0.1, already in `.env.example`
+# and `test/setup/containers.ts`. The line was rewritten to read the pair from
+# the environment instead, but gitleaks scans the commit range on a pull
+# request and the original commit is in it, so the source fix alone cannot
+# clear the finding. This can.
+regexTarget = "line"
+regexes = ['''--user (rustfsadmin:rustfsadmin|"\$\$RUSTFS_ACCESS_KEY:\$\$RUSTFS_SECRET_KEY")''']

@@ -124,6 +124,34 @@ describe('the harness helpers', () => {
     expect((res.rows[0] as { n: number }).n).toBe(1)
   })
 
+  /**
+   * `beforeEach(flushRedis)` reads as if it flushed the container. It does
+   * not: vitest hands a hook its TestContext as the first argument, so that
+   * line is `flushRedis(context)`, and the old `=== undefined || === ''`
+   * guard rejected neither.
+   *
+   * Where it goes next depends on the shape, and both were measured. An
+   * ordinary object reaches `new Redis(obj)`, which ioredis 5.11.1 reads as
+   * an options bag and defaults to host `localhost`, port 6379, db 0 — the
+   * developer's own dev stack, which `flushdb()` then empties. Vitest
+   * 5.0.1's TestContext is not an ordinary object: it is a *function*
+   * carrying `task`, `expect`, `skip` and the rest, whose call body is the
+   * deprecated `done()` shim, and ioredis refuses a function outright. So
+   * today the mistake throws `Invalid argument function() { throw new
+   * Error("done() callback is deprecated, use promise instead") }`, which
+   * mentions neither Redis nor this helper — and it is ioredis's argument
+   * check, not ours, standing between the suite and a wiped dev stack.
+   *
+   * The real TestContext is used rather than a stand-in, because its shape
+   * is the whole hazard and it has already changed once. The cast is what
+   * `vitest run` does anyway: it executes without typechecking, so the
+   * compile error this would raise only arrives later, from `pnpm check`.
+   */
+  it('flushRedis refuses a vitest TestContext instead of reaching localhost', async (ctx) => {
+    const unguarded = flushRedis as unknown as (arg: unknown) => Promise<void>
+    await expect(unguarded(ctx)).rejects.toThrow(/needs a Redis URL/u)
+  })
+
   it('flushRedis empties the container Redis', async () => {
     const redis = new Redis(containers.redisUrl)
     try {

@@ -135,8 +135,9 @@ describe('src/migrate.ts', () => {
 })
 
 describe('src/infra/db/migration-lock.ts', () => {
-  // Task 11 consumes MIGRATION_LOCK_KEY, so evaluating the module that owns
-  // it must do nothing at all. While the constant lived in migrate.ts this
+  // `migrate.ts` (Task 10) and Task 12's `migrate-lock.test.ts` both import
+  // MIGRATION_LOCK_KEY, so evaluating the module that owns it must do
+  // nothing at all. While the constant lived in migrate.ts this
   // same run exited 1 with `[migrate] failed:` — naming the key would have
   // migrated the importer's database, and under vitest, silently.
   it('evaluates without opening a connection or printing anything', async () => {

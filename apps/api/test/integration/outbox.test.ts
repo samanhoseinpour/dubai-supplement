@@ -52,7 +52,7 @@ class SpyHandler {
 // ConfigModule and DbModule come from withDb(); this is the rest of the graph
 // under test — the outbox itself plus a provider carrying decorated methods
 // for the relay to discover. AppModule is deliberately not booted: nothing
-// here needs HTTP, and Task 14 owns wiring the relay into it.
+// here needs HTTP, and Task 16 owns wiring the relay into it.
 @Module({ imports: [OutboxModule], providers: [SpyHandler] })
 class TestModule {}
 

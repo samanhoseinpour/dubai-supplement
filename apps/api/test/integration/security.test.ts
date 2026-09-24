@@ -43,6 +43,14 @@ class PingController {
   }
 }
 
+/**
+ * The fixture controller as its own module, so it can be added beside the
+ * real AppModule: AppModule's own routes are the health ones, and those are
+ * deliberately uncounted (`@SkipThrottle()`, Task 15).
+ */
+@Module({ controllers: [PingController] })
+class PingModule {}
+
 const makeConfig = (over: Record<string, string> = {}) =>
   new AppConfig(
     EnvSchema.parse({
@@ -315,13 +323,18 @@ describe('security wiring', () => {
   })
 
   // The wiring main.ts boots: without the APP_GUARD provider, or with the
-  // in-memory storage, everything above would still pass.
+  // in-memory storage, everything above would still pass. The guard, its
+  // options and its Redis storage all come from AppModule here; PingModule
+  // only supplies a route for the global guard to act on, because AppModule's
+  // own routes are the two health ones and those are deliberately uncounted.
   describe('AppModule', () => {
     let app: NestFastifyApplication
     let redis: Redis
 
     beforeAll(async () => {
-      const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
+      const moduleRef = await Test.createTestingModule({
+        imports: [AppModule, PingModule],
+      }).compile()
       const config = moduleRef.get(AppConfig)
       await flushRedis(config.redisUrl)
       redis = new Redis(config.redisUrl)
@@ -340,15 +353,29 @@ describe('security wiring', () => {
     it('guards every route at THROTTLE_LIMIT per client, counting in Redis', async () => {
       const client = '203.0.113.120'
       const hit = () =>
-        app.inject({ method: 'GET', url: '/health/live', headers: { 'x-forwarded-for': client } })
+        app.inject({ method: 'GET', url: '/ping', headers: { 'x-forwarded-for': client } })
 
       for (let i = 0; i < THROTTLE_LIMIT; i += 1) {
         expect((await hit()).statusCode).toBe(200)
       }
       expect((await hit()).statusCode).toBe(429)
-      expect(await redis.get(hitsKey(client, 'HealthController', 'live'))).toBe(
-        String(THROTTLE_LIMIT + 1),
-      )
+      expect(await redis.get(hitsKey(client))).toBe(String(THROTTLE_LIMIT + 1))
+    })
+
+    // The exception, and the reason it is one: the guard's storage is Redis,
+    // so counting a probe means reaching Redis before the route runs — and a
+    // Redis outage then turns /health/live into a 500 after ioredis gives up,
+    // which restart-loops the container, because the Docker HEALTHCHECK
+    // points there (Task 15, §5.5). `@SkipThrottle()` on the controller is
+    // what keeps both probes off Redis; deleting it puts a bucket here.
+    it('counts nothing for the health routes', async () => {
+      const client = '203.0.113.121'
+      for (const url of ['/health/live', '/health/ready']) {
+        const res = await app.inject({ method: 'GET', url, headers: { 'x-forwarded-for': client } })
+        expect(res.statusCode).toBe(200)
+      }
+      expect(await redis.exists(hitsKey(client, 'HealthController', 'live'))).toBe(0)
+      expect(await redis.exists(hitsKey(client, 'HealthController', 'ready'))).toBe(0)
     })
   })
 })

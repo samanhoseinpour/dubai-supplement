@@ -18,17 +18,16 @@ async function bootDb(poolMax?: number): Promise<TestingModule> {
 }
 
 describe('DbModule', () => {
+  let suiteApp: TestingModule
   let db: Db
-  let close: () => Promise<void>
 
   beforeAll(async () => {
-    const app = await bootDb()
-    db = app.get<Db>(DRIZZLE)
-    close = () => app.close()
+    suiteApp = await bootDb()
+    db = suiteApp.get<Db>(DRIZZLE)
   })
 
   afterAll(async () => {
-    await close()
+    await suiteApp.close()
   })
 
   it('executes a query through the pool', async () => {
@@ -59,9 +58,17 @@ describe('DbModule', () => {
       await app.close()
     }
   })
+})
 
+// Its own describe and its own boot, because the assertion is that the pool
+// is dead afterwards. On the suite's shared pool this test would take every
+// test declared below it down with it, each failing with "Cannot use a pool
+// after calling end on the pool" — loud, but pointing at the wrong test.
+describe('DbModule shutdown', () => {
   it('closes the pool on shutdown, so a test run does not leak connections', async () => {
-    await close()
+    const app = await bootDb()
+    const db = app.get<Db>(DRIZZLE)
+    await app.close()
     // Drizzle wraps the driver's error; pg's own message rides along as the
     // cause, and it is that message which says the pool ended rather than
     // the query failing for some other reason.
@@ -73,6 +80,5 @@ describe('DbModule', () => {
     expect((failure as Error).cause).toMatchObject({
       message: expect.stringContaining('after calling end') as string,
     })
-    close = () => Promise.resolve()
   })
 })

@@ -45,6 +45,17 @@ jobs:
           # fetch-depth and turbo falls back to "assume everything changed".
           # Setting the base explicitly is what actually makes --affected work.
           TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      - name: Build with an unreachable API URL (DoD 9)
+        run: pnpm turbo run build --affected --output-logs=errors-only --env-mode=strict
+        env:
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          # A closed port on purpose: §10.1 makes "the build succeeds against
+          # an unreachable API" the DoD 9 acceptance, so a build that quietly
+          # fetches at compile time fails here instead of in production. It has
+          # no effect until apps/web exists in Phase 3, and declaring it now
+          # means the job does not change shape then.
+          API_INTERNAL_URL: http://127.0.0.1:9
 
   authors:
     if: github.event_name != 'schedule'

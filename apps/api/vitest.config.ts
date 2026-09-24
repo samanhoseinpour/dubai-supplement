@@ -5,8 +5,10 @@ export default defineConfig({
     root: './',
     // Unit only. Everything under test/integration/** needs Docker and runs
     // under vitest.integration.config.ts, so this suite stays runnable with
-    // no daemon and no stores (§9.4 rule 3).
-    include: ['src/**/*.test.ts'],
+    // no daemon and no stores (§9.4 rule 3). `test/*.test.ts` is deliberately
+    // one level deep: it picks up test/boundaries.test.ts, which reads config
+    // files and needs nothing running, and cannot reach test/integration/**.
+    include: ['src/**/*.test.ts', 'test/*.test.ts'],
     clearMocks: true,
     // A complete, schema-valid environment with every store on a closed port.
     // `ConfigModule.forRoot({ envFilePath: '.env', validate })` runs while the

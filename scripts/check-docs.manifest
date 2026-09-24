@@ -53,6 +53,7 @@ packages/config-typescript/nextjs.json
 packages/config-typescript/library.json
 packages/config-eslint/package.json
 packages/config-eslint/base.js
+packages/config-eslint/esm-ts-resolver.js
 packages/config-eslint/nest.js
 packages/config-eslint/next.js
 packages/config-eslint/rtl.js

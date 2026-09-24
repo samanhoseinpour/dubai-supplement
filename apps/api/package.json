@@ -12,6 +12,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:storage": "vitest run --config vitest.storage.config.ts",
     "lint": "eslint .",
+    "boundaries": "depcruise src --config .dependency-cruiser.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -50,6 +51,7 @@
     "@testcontainers/postgresql": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "dependency-cruiser": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "pino-pretty": "catalog:",

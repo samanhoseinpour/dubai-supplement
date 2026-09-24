@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Test, type TestingModule } from '@nestjs/testing'
@@ -11,6 +12,10 @@ const migrationSql = readFileSync(
   new URL('../../drizzle/0000_extensions.sql', import.meta.url),
   'utf8',
 )
+
+// How drizzle's readMigrationFiles() derives the value it writes to the journal
+// (migrator.cjs): sha256 over the whole file, before any splitting.
+const migrationHash = createHash('sha256').update(migrationSql).digest('hex')
 
 describe('0000_extensions', () => {
   let app: TestingModule
@@ -26,6 +31,18 @@ describe('0000_extensions', () => {
 
   afterAll(async () => {
     await app.close()
+  })
+
+  // The precondition every other test in this file rests on, and the only one
+  // that cannot be satisfied by this file's own writes. Without it the suite
+  // can be green against a database the migrator never touched: the
+  // re-runnability test below applies the same SQL itself, so it manufactures
+  // exactly the state the other four check. It also pins the artefact to what
+  // was applied — drizzle gates on the journal timestamp and never compares
+  // the hash it stores, so an edited migration silently never re-applies.
+  it('was applied by the migrator, and by this exact file', async () => {
+    const res = await db.execute(sql`select hash from drizzle.__drizzle_migrations`)
+    expect(res.rows.map((row) => (row as { hash: string }).hash)).toContain(migrationHash)
   })
 
   it('enables pg_trgm', async () => {
@@ -71,10 +88,15 @@ describe('0000_extensions', () => {
   // Guards against a hand-written migration that omits IF NOT EXISTS. The
   // migrator will not re-run 0000 by itself once the journal row is there, so
   // re-runnability is checked by replaying the committed file — which is what
-  // a database left half-migrated by a failed deploy actually faces.
-  it('is re-runnable: applying the committed SQL a second time does not fail', async () => {
-    for (const statement of migrationSql.split('--> statement-breakpoint')) {
-      await db.execute(sql.raw(statement))
+  // a database left half-migrated by a failed deploy actually faces. Both
+  // passes happen here rather than leaning on the migration already being
+  // applied, so the second one is a re-application whatever state this runs in.
+  it('is re-runnable: applying the committed SQL twice does not fail', async () => {
+    const statements = migrationSql.split('--> statement-breakpoint')
+    for (let pass = 0; pass < 2; pass++) {
+      for (const statement of statements) {
+        await db.execute(sql.raw(statement))
+      }
     }
     const res = await db.execute(
       sql`select count(*)::int as n from pg_collation where collname = 'fa'`,

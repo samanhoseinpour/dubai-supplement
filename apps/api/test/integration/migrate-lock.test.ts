@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest'
 import pg from 'pg'
 // The barrel, never src/migrate.ts: naming the constant there would migrate
 // the importer's database on import (§6.2).
@@ -24,25 +24,25 @@ const PG_IDLE_TIMEOUT_MS = 10_000
 const BLOCKED_DB = 'migrate_lock_blocked'
 const FAILING_DB = 'migrate_lock_failing'
 
-function containerUrl(): URL {
-  const base = process.env.DATABASE_URL
-  if (base === undefined) {
-    throw new Error('DATABASE_URL is unset; the Testcontainers global setup writes it.')
-  }
-  return new URL(base)
-}
+/**
+ * From vitest's provided context, never from process.env. This is the one
+ * file in the suite that runs `create database`, `drop database` and
+ * `pg_terminate_backend`, so what it is pointed at must be a container by
+ * construction: the provided context exists only because containers.ts
+ * created one, where DATABASE_URL is an ordinary environment variable that
+ * anything upstream of the run could have set to anything.
+ */
+const containerDatabaseUrl = inject('containers').databaseUrl
 
 /** The same Postgres container, a different database on it. */
 function urlFor(database: string): string {
-  const url = containerUrl()
+  const url = new URL(containerDatabaseUrl)
   url.pathname = `/${database}`
   return url.toString()
 }
 
 /** The database the global setup migrated; these two are created beside it. */
-function suiteDatabase(): string {
-  return containerUrl().pathname.slice(1)
-}
+const SUITE_DB = new URL(containerDatabaseUrl).pathname.slice(1)
 
 async function withClient<T>(database: string, fn: (client: pg.Client) => Promise<T>): Promise<T> {
   const client = new pg.Client({ connectionString: urlFor(database) })
@@ -91,7 +91,7 @@ function startMigrator(database: string): Migrator {
 
 /** Sessions queued behind the migration lock on `database`, right now. */
 async function waitersFor(database: string): Promise<number> {
-  return withClient(suiteDatabase(), async (client) => {
+  return withClient(SUITE_DB, async (client) => {
     const res = await client.query<{ n: number }>(
       `select count(*)::int as n
          from pg_locks
@@ -111,7 +111,7 @@ async function waitersFor(database: string): Promise<number> {
 
 describe('the migration lock', () => {
   beforeAll(async () => {
-    await withClient(suiteDatabase(), async (client) => {
+    await withClient(SUITE_DB, async (client) => {
       for (const database of [BLOCKED_DB, FAILING_DB]) {
         await client.query(`drop database if exists ${database}`)
         await client.query(`create database ${database}`)
@@ -130,7 +130,7 @@ describe('the migration lock', () => {
   afterAll(async () => {
     for (const child of started) if (child.exitCode === null) child.kill('SIGKILL')
     started.clear()
-    await withClient(suiteDatabase(), async (client) => {
+    await withClient(SUITE_DB, async (client) => {
       for (const database of [BLOCKED_DB, FAILING_DB]) {
         // A killed migrator's session may outlive it for a moment, and a
         // database with a connection on it cannot be dropped.

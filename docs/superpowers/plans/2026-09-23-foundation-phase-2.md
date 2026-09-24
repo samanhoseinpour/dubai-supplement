@@ -3659,6 +3659,7 @@ The two ways out were: add a 503 code to `ERROR_CODES`, or scope a filter to the
 Required effect. The mechanism is yours:
 
 1. `GET /health/ready` with a store unreachable answers **503 carrying Terminus's own body** — `status`, and `details` naming the indicator that is down — not an RFC 9457 problem body.
+   **Each indicator separately**, not just whichever one is easiest to break. An indicator that returns `up()` without ever reaching its store passes every happy-path test in Step 1, and a `PostgresIndicator` that skips its `select 1` would report the API ready while Postgres is down — which is Liara routing traffic to a container that 500s every request, the one outcome this endpoint exists to prevent. Postgres is the awkward one to take down mid-suite; that is why it is the one worth doing.
 2. Every other route's error handling is **unchanged**; `ProblemFilter` still owns them. Pin that too: assert some non-health route still answers `application/problem+json`.
 3. A readiness 503 **does not log a stack trace**. It is a reported condition, not a bug, and Liara probes on an interval — `ProblemFilter`'s `status >= 500` branch would otherwise write one full stack per probe for the length of the outage. (The relay's own per-cycle error line is a separate, already-recorded source of the same noise. It is **not** yours to fix here.)
 

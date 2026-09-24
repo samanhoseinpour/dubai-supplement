@@ -33,15 +33,22 @@ let rustfs: StartedTestContainer | undefined
  */
 export async function setup(project: TestProject): Promise<void> {
   // Migrations run from the compiled entrypoint, not through tsx, so the suite
-  // exercises the same code path the container entrypoint uses (§5.2). Checked
-  // before anything is started: a missing build is a one-line fix, not worth
-  // three containers' startup first.
+  // exercises the same code path the container entrypoint uses (§5.2), and
+  // test/integration/process-role.test.ts spawns `dist/main.js` for the same
+  // reason — Nest cannot boot under tsx, which emits no `design:paramtypes`.
+  // Checked before anything is started: a missing build is a one-line fix, not
+  // worth three containers' startup first. Named here rather than skipped in
+  // the test, because a test that quietly declines to run is worse than one
+  // that fails.
   const migrate = fileURLToPath(new URL('../../dist/migrate.js', import.meta.url))
-  if (!existsSync(migrate)) {
-    throw new Error(
-      `[containers] ${migrate} is missing. The integration suite migrates through the compiled ` +
-        'entrypoint; run `pnpm --filter api build` first — `pnpm check` does it for you.',
-    )
+  const main = fileURLToPath(new URL('../../dist/main.js', import.meta.url))
+  for (const entrypoint of [migrate, main]) {
+    if (!existsSync(entrypoint)) {
+      throw new Error(
+        `[containers] ${entrypoint} is missing. The integration suite runs the compiled ` +
+          'entrypoints; run `pnpm --filter api build` first — `pnpm check` does it for you.',
+      )
+    }
   }
 
   // Required with no default. Vitest gives a worker `process.env.NODE_ENV ||

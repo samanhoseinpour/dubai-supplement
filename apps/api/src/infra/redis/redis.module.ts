@@ -1,4 +1,11 @@
-import { Global, Inject, Injectable, Module, type OnApplicationShutdown } from '@nestjs/common'
+import {
+  Global,
+  Inject,
+  Injectable,
+  Logger,
+  Module,
+  type OnApplicationShutdown,
+} from '@nestjs/common'
 import type { Redis } from 'ioredis'
 import { AppConfig } from '../config/index.js'
 import { KeyValueStore, RedisKeyValueStore } from './key-value.store.js'
@@ -31,8 +38,16 @@ export const REDIS_QUIT_TIMEOUT_MS = 1_000
  * constructed its own client inside app.module.ts's factory and nothing ever
  * closed it, so a SIGTERM left a live socket holding the event loop open.
  */
+/** What became of the drain. Symbols, so no Redis reply can impersonate one. */
+const DRAINED = Symbol('redis drained')
+const TIMED_OUT = Symbol('redis quit timed out')
+
 @Injectable()
 class RedisCloser implements OnApplicationShutdown {
+  // Writes through whatever `app.useLogger` installed — pino in `createApp`
+  // and in `bootstrapWorker` — exactly as OutboxRelay does.
+  private readonly logger = new Logger(RedisCloser.name)
+
   constructor(@Inject(REDIS) private readonly redis: Redis) {}
 
   async onApplicationShutdown(): Promise<void> {
@@ -67,22 +82,62 @@ class RedisCloser implements OnApplicationShutdown {
     // Docker and Liara commonly allow *and* left a process that would not
     // exit. This bounds the first and the disconnect() below ends the second.
     let expiry: NodeJS.Timeout | undefined
-    await Promise.race([
-      // Swallowed, and it has to be: the only thing this rejection can say is
-      // that a Redis we are about to disconnect from could not be reached,
-      // and left unhandled it would surface after the process has finished
-      // shutting down, with nothing left to catch it.
-      this.redis.quit().catch(() => undefined),
-      new Promise<void>((resolve) => {
-        expiry = setTimeout(resolve, REDIS_QUIT_TIMEOUT_MS)
+    const outcome: unknown = await Promise.race([
+      // Caught, and turned into a value rather than left as a rejection.
+      // Catching is not optional: this promise can settle long after the race
+      // is over — after the process has finished shutting down — and an
+      // unhandled rejection arriving then has nothing left to catch it.
+      // Keeping the value is a separate decision, made below.
+      this.redis.quit().then(
+        () => DRAINED,
+        (error: unknown) => error,
+      ),
+      new Promise<symbol>((resolve) => {
+        expiry = setTimeout(() => {
+          resolve(TIMED_OUT)
+        }, REDIS_QUIT_TIMEOUT_MS)
       }),
     ])
     clearTimeout(expiry)
+
+    // Discarding the outcome would remove the only signal that Redis was
+    // dropped rather than drained — before this bound existed, Nest's own
+    // `Promise.allSettled` logged the rejected hook, and silence here would
+    // have been a strict loss. One line, at `warn` rather than `error`:
+    // nothing about it is actionable in the moment, the shutdown continues,
+    // and what is lost is throttler counters and cache writes rather than
+    // anything durable (the outbox is Postgres, drained by the relay above).
+    // At `error` it would be noise in exactly the incident where the log
+    // matters most; below `warn` it would not reach a production LOG_LEVEL
+    // of `info` at all.
+    //
+    // Two branches because they are two different facts, and only the first
+    // can be relied on to arrive: a quit() that loses the race NEVER settles
+    // afterwards — measured, still pending 15 s after disconnect() with the
+    // offline queue holding both it and the command it was behind — so a log
+    // line hung off the rejection alone would be a signal that never fires.
+    if (outcome === TIMED_OUT) {
+      this.logger.warn({
+        msg: `redis did not drain within ${String(REDIS_QUIT_TIMEOUT_MS)} ms of shutdown; dropping the connection`,
+      })
+    } else if (outcome !== DRAINED) {
+      this.logger.warn({ err: outcome, msg: 'redis refused to drain on shutdown' })
+    }
+
     // Unconditional. A resolved quit() does not mean the socket is gone —
     // ioredis reaches 'end' on the stream's own close event, a tick later —
     // and disconnect() on a client that is already finished is a no-op. What
     // it is here for is the other branch: a quit() that lost the race, whose
     // client would otherwise reconnect for as long as the outage lasts.
+    //
+    // What it drops does not come back. A command still in the offline queue
+    // — including that quit() itself — stays pending forever rather than
+    // rejecting: measured at 15 s after this line, `offlineQueue` still 2,
+    // and no timer left on the event loop. That is harmless while this is the
+    // only shutdown hook that touches Redis, but Nest runs the hooks at one
+    // hierarchy level concurrently (`Promise.allSettled`), so a hook added
+    // later that awaited a Redis command would never resolve and would hang
+    // `app.close()` outright.
     this.redis.disconnect()
   }
 }

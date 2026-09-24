@@ -7,16 +7,6 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      // `*.tsbuildinfo` is deliberately NOT an output. It is build STATE, not
-      // an artifact anything consumes, and it is the one file whose meaning
-      // ("this project is up to date") depends on mtimes turbo does not
-      // model. Caching it lets a restored cache hand back a "do not rebuild"
-      // token keyed to a source hash it need not correspond to: `tsc -b`
-      // decides by mtime, so a source file restored from a backup rewinds
-      // time, the build is skipped, and the stale `dist` is then cached
-      // against the NEW hash. That poisoned entry survives later runs and
-      // turns `pnpm check` green over code nobody compiled — observed once
-      // during Phase 2. Rebuilding all three packages from cold costs 2.6 s.
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
       "env": ["NEXT_PUBLIC_SITE_URL", "API_INTERNAL_URL"]
     },

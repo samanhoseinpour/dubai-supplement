@@ -238,17 +238,22 @@ describe('OutboxRelay', () => {
     expect(seen).toEqual([])
   })
 
-  // Review Focus 5. base.json sets exactOptionalPropertyTypes, and
-  // outbox_events.last_error is the first nullable column in the codebase, so
-  // this is where the pattern for every optional column after it is set: the
-  // insert names a key only when it has a value.
+  // Review Focus 5, with its premise corrected. base.json does set
+  // exactOptionalPropertyTypes and outbox_events.last_error is the first
+  // nullable column in the codebase — but the collision the review expects
+  // does not exist in drizzle 0.45.3, measured twice: `table.d.ts:61` types
+  // an optional insert key's value as `| undefined`, and
+  // `pg-core/dialect.js:377-388` emits `default` both for an absent key and
+  // for a Param holding `undefined`. So `{ lastError: maybeUndefined }`
+  // compiles and stores NULL, there is no compile error to push an author
+  // towards a coercion, and the first two lines below are the brief's own
+  // assertions rather than a replacement for them.
   //
-  // Measured, because the hazard is not quite where it looks. drizzle 0.45.3
-  // types an optional insert key as `T | null | undefined` and maps an
-  // `undefined` to DEFAULT, so `{ lastError: maybeUndefined }` does compile
-  // and does store NULL. What does not survive is the coercion an author
-  // reaches for when they expect that assignment to be rejected — and the
-  // counter-row at the end is what proves this check tells the two apart.
+  // They are kept because they are what a coercion would break: with
+  // `lastError: String(absent)` added to publish(), this fails with
+  // `expected 'undefined' to be null`. The counter-row at the end pins
+  // Postgres's `is null` rather than anything this system does — it is here
+  // so the count is known to discriminate, and it is the weaker half.
   it('stores an absent optional as NULL, not as the string "undefined"', async () => {
     await publish('test.thing.happened')
 
@@ -259,9 +264,10 @@ describe('OutboxRelay', () => {
     const nulls = sql`select count(*)::int as n from outbox_events where last_error is null`
     expect((await db.execute(nulls)).rows[0]).toMatchObject({ n: 1 })
 
-    // The mistake, made on purpose, so the count above is known to
-    // discriminate rather than merely to pass: `String(absent)` stores the
-    // nine letters of "undefined", which `is null` does not match.
+    // The mistake, made on purpose. This pins Postgres, not the outbox:
+    // `String(absent)` stores the nine letters of "undefined", which `is
+    // null` does not match, so the count above cannot be passing for the
+    // wrong reason.
     await db.insert(outboxEvents).values({
       aggregateType: 'thing',
       aggregateId: AGGREGATE_ID,

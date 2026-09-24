@@ -1,4 +1,10 @@
-import { Inject, Injectable, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnApplicationShutdown,
+  type OnModuleInit,
+} from '@nestjs/common'
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core'
 import { and, asc, eq, isNull, lt } from 'drizzle-orm'
 import { AppConfig } from '../config/index.js'
@@ -19,9 +25,13 @@ export interface RelayCycle {
 
 @Injectable()
 export class OutboxRelay implements OnModuleInit, OnApplicationShutdown {
+  // Writes through whatever `app.useLogger` installed — pino, in `createApp`
+  // — exactly as ProblemFilter does.
+  private readonly logger = new Logger(OutboxRelay.name)
   private readonly handlers = new Map<string, Handler[]>()
   private timer: NodeJS.Timeout | undefined
   private inFlight: Promise<unknown> = Promise.resolve()
+  private running = false
   private stopped = false
 
   constructor(
@@ -138,14 +148,43 @@ export class OutboxRelay implements OnModuleInit, OnApplicationShutdown {
     if (this.timer) return
     this.stopped = false
     const tick = async (): Promise<void> => {
-      if (this.stopped) return
-      // Held so stop() can await the cycle that is running right now. A
-      // failed cycle is swallowed: the rows it did not reach are still
-      // unpublished and the next tick finds them.
-      this.inFlight = this.runOnce().catch(() => ({ processed: 0, failed: 0 }))
+      // One cycle at a time. A batch of fifty holds its connection for the
+      // sum of its handlers' latencies, which can outlast the interval, and a
+      // tick landing on top of an unfinished cycle would take a second pooled
+      // connection to find nothing (SKIP LOCKED leaves it the rows the first
+      // is still holding). It also keeps `inFlight` the cycle stop() must
+      // wait for rather than the newest of several — without which the
+      // comment in stop() would be a stronger claim than the code.
+      if (this.stopped || this.running) return
+      this.running = true
+      this.inFlight = this.cycle()
       await this.inFlight
     }
     this.timer = setInterval(() => void tick(), this.config.outboxPollMs)
+  }
+
+  /**
+   * One polled cycle, and the only place a relay failure is ever recorded.
+   *
+   * A failure at the transaction level — the pool ended, the connection lost,
+   * a permission revoked — reaches none of the per-row catches in runOnce():
+   * `attempts` never moves, so the rows stay unpublished at zero attempts,
+   * invisible to the `outbox.dead` readiness count, which sees parked rows
+   * only. This line is the sole symptom, so it must exist.
+   *
+   * `{ err }` in one object rather than `error('…', err)`: Nest appends its
+   * context as the last argument, and nestjs-pino reads a string message's
+   * remaining params as pino interpolation arguments — an Error passed that
+   * way is dropped. This is the shape ProblemFilter uses.
+   */
+  private async cycle(): Promise<void> {
+    try {
+      await this.runOnce()
+    } catch (error: unknown) {
+      this.logger.error({ err: error, msg: 'outbox cycle failed' })
+    } finally {
+      this.running = false
+    }
   }
 
   async stop(): Promise<void> {

@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { ProblemDetailsSchema } from '@ds/contracts'
@@ -65,6 +66,20 @@ describe('the Swagger UI behind createApp()', () => {
       const bundle = await app.inject({ method: 'GET', url: '/docs/swagger-ui-bundle.js' })
       expect(bundle.statusCode).toBe(200)
       expect(bundle.headers['content-type']).toContain('javascript')
+    })
+
+    // The loop between what the app serves and what is committed: the
+    // document behind the UI is the artefact in the repository, byte for byte
+    // once parsed, not a drifted sibling of it.
+    it('serves the committed openapi.json at /docs-json', async () => {
+      app = await bootWith('true')
+      const res = await app.inject({ method: 'GET', url: '/docs-json' })
+      expect(res.statusCode).toBe(200)
+      expect(res.headers['content-type']).toContain('application/json')
+      const committed = JSON.parse(
+        await readFile(new URL('../../openapi.json', import.meta.url), 'utf8'),
+      ) as unknown
+      expect(JSON.parse(res.payload)).toEqual(committed)
     })
   })
 

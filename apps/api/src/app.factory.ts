@@ -1,9 +1,11 @@
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
+import { SwaggerModule } from '@nestjs/swagger'
 import { Logger } from 'nestjs-pino'
 import { AppModule } from './app.module.js'
 import { AppConfig, validatedEnv } from './infra/config/index.js'
 import { buildValidationPipe, ProblemFilter, registerSecurity } from './infra/http/index.js'
+import { buildDocument } from './shared/openapi/index.js'
 
 /**
  * Everything main.ts boots, short of listening — its own module so a test
@@ -33,6 +35,14 @@ export async function createApp(): Promise<NestFastifyApplication> {
   await registerSecurity(app, config)
   app.useGlobalPipes(buildValidationPipe())
   app.useGlobalFilters(new ProblemFilter(config.nodeEnv))
+  // Development only (`.env.example` sets it, production never does): the UI
+  // and its assets at /docs, the document at /docs-json. Under helmet's
+  // default CSP as registered above — measured, not assumed: the page's
+  // bootstrap is an external same-origin script and Nest inlines the spec,
+  // so nothing needs relaxing (Task 9).
+  if (config.openapiUiEnabled) {
+    SwaggerModule.setup('docs', app, buildDocument(app))
+  }
   app.enableShutdownHooks()
   return app
 }

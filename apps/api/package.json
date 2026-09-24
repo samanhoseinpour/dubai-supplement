@@ -16,6 +16,7 @@
     "@ds/contracts": "workspace:*",
     "@fastify/cookie": "catalog:",
     "@fastify/helmet": "catalog:",
+    "@fastify/static": "catalog:",
     "@nest-lab/throttler-storage-redis": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",

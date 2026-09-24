@@ -110,12 +110,13 @@ export async function setup(project: TestProject): Promise<void> {
 
 /**
  * Node's own warnings, dropped. They arrive on stderr and are not the
- * migrator's doing: `.node-version` pins a major and `actions/setup-node`
- * resolves the latest patch, so a release that adds an ExperimentalWarning or
- * a DeprecationWarning on a path `pg` or `drizzle` touches would otherwise
- * turn CI red with nothing changed in the repository. A real failure is a
- * non-zero exit, which rejects above, and prints `[migrate] failed:`, which
- * survives this filter — as does anything else the migrator writes.
+ * migrator's doing: any dependency on the path this script takes — `pg`,
+ * `drizzle-orm`, or something either of them loads — can start emitting an
+ * ExperimentalWarning or a DeprecationWarning after a lockfile bump, which
+ * would otherwise turn CI red with no change to the migrator at all. A real
+ * failure is a non-zero exit, which rejects above, and prints
+ * `[migrate] failed:`, which survives this filter — as does anything else
+ * the migrator writes.
  */
 function withoutNodeWarnings(stderr: string): string {
   return stderr

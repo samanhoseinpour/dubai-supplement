@@ -320,13 +320,12 @@ describe('GET /health with Redis unreachable', () => {
 })
 
 /**
- * The other way a store stops answering, and the one `pg` has no defence
- * against. A refused connection fails fast and hides this; a client that never
- * comes free does not fail at all — `pg.Pool` has no `connectionTimeoutMillis`
- * here, so the acquire simply waits. Measured on the network side too: `select
- * 1` through a pool pointed at a blackholed address was still pending after
- * 15 002 ms. Holding the only client reproduces the same unbounded wait with
- * no network trickery, on any machine.
+ * The other way a store stops answering, and the one the probe's own ceiling
+ * cannot do anything useful about: the connection never arrives. A refused
+ * port fails fast and hides this — a blackholed address, or a pool with every
+ * client busy, does not fail at all. `createPool`'s `connectionTimeoutMillis`
+ * is what bounds it, for probes and for request handlers alike; holding the
+ * only client reproduces that wait on any machine, with no network trickery.
  */
 describe('GET /health/ready with the Postgres pool exhausted', () => {
   let app: NestFastifyApplication
@@ -350,11 +349,12 @@ describe('GET /health/ready with the Postgres pool exhausted', () => {
     const res = await app.inject({ method: 'GET', url: '/health/ready' })
     expect(res.statusCode).toBe(503)
     const body = health(res)
-    // Terminus's own timeout message, so this pins the ceiling firing rather
-    // than some other error that happens to arrive first.
-    const timedOut = `timeout of ${String(POSTGRES_PROBE_TIMEOUT_MS)}ms exceeded`
-    expect(body.details.postgres?.message).toBe(timedOut)
-    expect(body.details.outbox?.message).toBe(timedOut)
+    // pg's own words for the queue-wait path, which reach the body only
+    // because the indicators unwrap drizzle's `Failed query:` wrapper. So this
+    // pins the pool's bound firing — not the probe ceiling, not some other
+    // failure that happened to arrive first.
+    expect(body.details.postgres?.message).toBe('timeout exceeded when trying to connect')
+    expect(body.details.outbox?.message).toBe('timeout exceeded when trying to connect')
     // Redis is on its own client and its own ceiling: unaffected.
     expect(body.details.redis?.status).toBe('up')
   })
@@ -364,5 +364,53 @@ describe('GET /health/ready with the Postgres pool exhausted', () => {
     expect(res.statusCode).toBe(503)
     expect(lines.filter((line) => line.includes('"stack"'))).toEqual([])
     expect(lines.filter((line) => line.includes('ProblemFilter'))).toEqual([])
+  })
+})
+
+/**
+ * What the probe's own ceiling is still for, now that the pool bounds every
+ * acquire: a statement that hangs on a connection it already holds. The pool
+ * timeout cannot see this one — the client was handed over long ago — and
+ * `pg` has no statement timeout set, so the query waits as long as the lock
+ * does.
+ *
+ * An ACCESS EXCLUSIVE lock on `outbox_events` blocks exactly the outbox
+ * indicator's `count(*)` and nothing else, which is why `postgres` stays up
+ * beside it. It is also the clearest demonstration of what `withTimeout`
+ * does and does not do: the probe answers at the ceiling, while the query it
+ * gave up on is still sitting there waiting for the lock — terminus passes an
+ * `AbortSignal` that `pg` does not accept, so the answer is bounded and the
+ * work is not.
+ */
+describe('GET /health/ready with a statement blocked on a lock', () => {
+  let app: NestFastifyApplication
+  let locker: PoolClient
+
+  beforeAll(async () => {
+    app = await bootApp(configWith({}))
+    locker = await app.get<Pool>(PG_POOL).connect()
+    await locker.query('begin')
+    await locker.query('lock table outbox_events in access exclusive mode')
+  })
+
+  afterAll(async () => {
+    // Releases the blocked probe queries too, so the pool can close.
+    await locker.query('rollback')
+    locker.release()
+    await app.close()
+  })
+
+  it('answers at the probe ceiling instead of waiting for the lock', async () => {
+    const started = Date.now()
+    const res = await app.inject({ method: 'GET', url: '/health/ready' })
+    expect(res.statusCode).toBe(503)
+    const body = health(res)
+    expect(body.details.outbox?.message).toBe(
+      `timeout of ${String(POSTGRES_PROBE_TIMEOUT_MS)}ms exceeded`,
+    )
+    // The connection was never the problem, so the other statement is fine.
+    expect(body.details.postgres?.status).toBe('up')
+    expect(body.details.redis?.status).toBe('up')
+    expect(Date.now() - started).toBeLessThan(POSTGRES_PROBE_TIMEOUT_MS * 2)
   })
 })

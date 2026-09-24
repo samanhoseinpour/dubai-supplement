@@ -90,9 +90,10 @@ describe('S3StorageProvider.ensureBucket', () => {
 
   /**
    * The one that must not pass. Bucket names are global, so this 409 says
-   * another account holds the name: reporting success would let a mistyped
-   * production S3_BUCKET clear first-deploy.md §6 and then 403 on the first
-   * real upload, after the step meant to catch it had already said OK.
+   * another account holds the name. first-deploy.md §6 would still fail —
+   * it `put`s right after `ensureBucket()` — but on a bare `AccessDenied`,
+   * which reads like a bad key and costs the operator the wrong search.
+   * The point of failing here is the bucket name in the message.
    */
   it('refuses BucketAlreadyExists and names the bucket it cannot have', async () => {
     const storage = await providerAnswering(409, errorXml('BucketAlreadyExists'))

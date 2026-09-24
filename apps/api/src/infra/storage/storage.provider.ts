@@ -62,10 +62,11 @@ export class S3StorageProvider extends StorageProvider implements OnApplicationS
    *   the owner, so there is nothing left to do.
    * - `BucketAlreadyExists` — the name is taken by **another account**, so
    *   nothing here can read or write it. This is what a mistyped or
-   *   already-claimed S3_BUCKET looks like, and treating it as success would
-   *   let docs/runbooks/first-deploy.md §6 report OK and the first real
-   *   `put` 403 afterwards — with the step that existed to catch it already
-   *   passed. It fails here instead, naming the bucket.
+   *   already-claimed S3_BUCKET looks like. Swallowing it does not hide the
+   *   problem — docs/runbooks/first-deploy.md §6 `put`s straight after this
+   *   and would fail there anyway — it hides the *cause*, behind a bare
+   *   `AccessDenied` that reads like bad credentials and sends the operator
+   *   to the wrong place. Failing here names the bucket instead.
    */
   async ensureBucket(): Promise<void> {
     try {

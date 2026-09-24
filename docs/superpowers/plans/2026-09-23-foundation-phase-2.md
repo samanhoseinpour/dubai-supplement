@@ -3455,13 +3455,14 @@ git commit -m "feat(api): add the Redis key-value and S3 storage ports"
 **Files:**
 
 - Modify: `apps/api/src/infra/health/health.controller.ts`, `health.module.ts`
-- Create: `apps/api/src/infra/health/postgres.indicator.ts`, `redis.indicator.ts`, `outbox.indicator.ts`
+- Create: `apps/api/src/infra/health/postgres.indicator.ts`, `redis.indicator.ts`, `outbox.indicator.ts`, and the controller-scoped filter Step 5 rules for
 - Test: `apps/api/test/integration/health-ready.test.ts`
 
 **Interfaces:**
 
 - Consumes: `DRIZZLE`/`type Db`; `REDIS` from Task 14; `outboxEvents`, `MAX_ATTEMPTS` from Task 13.
 - Produces: `GET /health/ready` → 200 `{ status: 'ok', details: { postgres: { status: 'up' }, redis: { status: 'up' }, outbox: { status: 'up', dead: number } } }`, or 503 when a store is unreachable.
+- Produces: a 503 that carries **Terminus's** body, not an RFC 9457 problem body — see Step 5. `@ds/contracts`'s `ERROR_CODES` stays at nine codes; health is not part of the API error contract.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3625,7 +3626,34 @@ ready() {
 }
 ```
 
-- [ ] **Step 5: Run, verify, commit**
+- [ ] **Step 5: The 503 path — Terminus's exception meets the global `ProblemFilter`**
+
+**Ruling, taken 2026-09-24**, carried forward from Task 6's review, which found this and deferred the decision to here.
+
+`HealthCheckService.check()` throws Terminus's `ServiceUnavailableException` when an indicator reports down. `ProblemFilter` is `@Catch()` — it catches everything — and an `HttpException` carrying 503 takes its `CODE_BY_STATUS` path, where **503 is absent**, so it falls through to `'INTERNAL'`. Two things follow, both wrong:
+
+- the body becomes `{ type: 'urn:problem:INTERNAL', title: 'Internal Server Error', status: 503, … }` — a title that contradicts its own status; and
+- Terminus's `{ status, info, error, details }` body is **discarded**, and that is the only part of the response saying _which_ store is down. Which is the entire purpose of the endpoint.
+
+The two ways out were: add a 503 code to `ERROR_CODES`, or scope a filter to the health controller. **Ruled: scope a filter to the health controller.** `ERROR_CODES` is the _API's_ error contract — nine codes, named by the spec, with a `@ds/contracts` test asserting exactly nine, consumed by `@ds/api-client` and the web app. `/health/ready` is not in that contract; its consumers are Liara's health checker and a human reading a deploy log. A tenth code would fix the title and still throw away `info`/`error`/`details` — repairing the cosmetic half of the defect, leaving the substantive half, and widening a public contract for an endpoint that does not belong to it. Cost if wrong: one controller-scoped filter to delete and a contracts change to make instead.
+
+Required effect. The mechanism is yours:
+
+1. `GET /health/ready` with a store unreachable answers **503 carrying Terminus's own body** — `status`, and `details` naming the indicator that is down — not an RFC 9457 problem body.
+2. Every other route's error handling is **unchanged**; `ProblemFilter` still owns them. Pin that too: assert some non-health route still answers `application/problem+json`.
+3. A readiness 503 **does not log a stack trace**. It is a reported condition, not a bug, and Liara probes on an interval — `ProblemFilter`'s `status >= 500` branch would otherwise write one full stack per probe for the length of the outage. (The relay's own per-cycle error line is a separate, already-recorded source of the same noise. It is **not** yours to fix here.)
+
+Verify the mechanism instead of assuming it. If you scope a filter with `@UseFilters` on the controller, **prove** it takes precedence over the globally registered `ProblemFilter` with a test that fails when that filter is removed — do not infer it from Nest's documented binding order.
+
+- [ ] **Step 6: The readiness endpoint must survive the outage it reports**
+
+This task's own preamble states the requirement — "the Docker `HEALTHCHECK` stays on `/health/live` so a Redis blip does not restart-loop the container" — and no step implements it. `ThrottlerGuard` is registered globally as `APP_GUARD` and its storage is Redis-backed, so it runs ahead of both health routes and reaches Redis on every probe.
+
+Required effect: **with Redis unreachable, `GET /health/live` still answers 200 and `GET /health/ready` answers 503 reporting `redis` down — neither answers 500.** A readiness endpoint that returns `INTERNAL` when Redis is down has failed at the one job it has, and a liveness endpoint that does the same restart-loops the container during a Redis blip.
+
+Find out what the global guard actually does to those two routes against a Redis that is not answering before deciding what to change. `@SkipThrottle()` on the controller is the obvious candidate, but the deliverable is the measured behaviour, not the decorator. The test must drive the real guard and the real client against a Redis that is not answering — arranging that is yours; substituting a mock of the guard for the behaviour is not.
+
+- [ ] **Step 7: Run, verify, commit**
 
 ```bash
 pnpm --filter api build && pnpm --filter api test:integration

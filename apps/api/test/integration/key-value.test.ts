@@ -41,8 +41,17 @@ describe('KeyValueStore', () => {
     expect(await store.get('absent')).toBeNull()
   })
 
-  it('honours a TTL', async () => {
+  /**
+   * Both halves are the test. A key that was never written is also absent
+   * after 1200ms, so the disappearance on its own says nothing about the TTL
+   * branch — measured: with `set()`'s ttl branch replaced by a no-op that
+   * writes nothing, the absence assertion alone still passed. The read
+   * before the wait is what distinguishes "expired" from "never stored".
+   */
+  it('honours a TTL: the value is there, then it is not', async () => {
     await store.set('short', 'v', 1)
+    expect(await store.get('short')).toBe('v')
+
     await new Promise((r) => setTimeout(r, 1200))
     expect(await store.get('short')).toBeNull()
   })

@@ -17,6 +17,14 @@ import { dirname, resolve as resolvePath } from 'node:path'
  * Only relative `.js` specifiers are claimed. Everything else — packages,
  * builtins, workspace dependencies — is declined, so the Node resolver
  * configured after it answers instead.
+ *
+ * When a relative `.js` specifier names neither an existing `.ts` nor an
+ * existing `.js`, this declines, the Node resolver fails too, and the boundary
+ * rules then **skip that import silently** — the same vacuous-green path
+ * described above. That is deliberate and safe here only because the import is
+ * already broken: `tsc --noEmit` fails on it in the same `pnpm check`, so
+ * nothing reaches a reviewer on the strength of a boundary rule that never
+ * ran. Do not extend this resolver to guess at a path it cannot see on disk.
  */
 export const interfaceVersion = 2
 

@@ -141,3 +141,64 @@ describe('eslint-plugin-boundaries', () => {
     ])
   })
 })
+
+/**
+ * The assertions above prove the policies are *declared*. These prove they
+ * *report*, and they exist because two settings silence every one of them
+ * without touching a policy:
+ *
+ * - `import/resolver` — `eslint-plugin-boundaries` resolves through
+ *   `eslint-module-utils`, whose Node resolver cannot map the ESM specifier
+ *   `./infra/db/index.js` onto `index.ts`. An unresolved target is an unknown
+ *   element, and `getDependencyRule` skips unknown local targets because
+ *   `checkUnknownLocals` defaults to `false`.
+ * - `boundaries/files` — `dependencyRule` returns no visitors at all for a
+ *   file that is unknown in both dimensions, which is every entrypoint and
+ *   every file under `test/`.
+ *
+ * Delete either and the fixtures below go quiet while `pnpm check` stays
+ * green. That is the failure this whole task was about, so it is asserted by
+ * linting rather than by reading the config back.
+ */
+describe('eslint-plugin-boundaries actually reports', () => {
+  const eslint = new ESLint({ cwd: apiDir })
+
+  // Real paths with substituted content: the config ESLint resolves is the one
+  // the file would really get, and no fixture is written to disk.
+  const boundaryErrors = async (relativeFile: string, code: string): Promise<string[]> => {
+    const [result] = await eslint.lintText(code, { filePath: `${apiDir}${relativeFile}` })
+    return (result?.messages ?? [])
+      .filter((message) => message.ruleId === 'boundaries/dependencies')
+      .map((message) => message.message)
+  }
+
+  it.each([
+    [
+      'between two infra directories — guards import/resolver',
+      'src/infra/http/security.ts',
+      "import { DRIZZLE } from '../db/drizzle.provider.js'\nexport const probe = DRIZZLE\n",
+    ],
+    [
+      'from an entrypoint — guards the entrypoint file category',
+      'src/app.module.ts',
+      "import { DRIZZLE } from './infra/db/drizzle.provider.js'\nexport const probe = DRIZZLE\n",
+    ],
+    [
+      'from the integration suite — guards the test file category',
+      'test/integration/health.test.ts',
+      "import { DRIZZLE } from '../../src/infra/db/drizzle.provider.js'\nexport const probe = DRIZZLE\n",
+    ],
+  ])('reports infra-barrel on a deep import %s', async (_label, relativeFile, code) => {
+    const messages = await boundaryErrors(relativeFile, code)
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toMatch(/^infra-barrel:/)
+  })
+
+  it('stays silent on the barrel import it exists to permit', async () => {
+    const messages = await boundaryErrors(
+      'src/infra/http/security.ts',
+      "import { DRIZZLE } from '../db/index.js'\nexport const probe = DRIZZLE\n",
+    )
+    expect(messages).toEqual([])
+  })
+})

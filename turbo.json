@@ -20,7 +20,7 @@
     "api#build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
     "api#test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env"],
+      "inputs": ["$TURBO_DEFAULT$", ".env", "$TURBO_ROOT$/package.json", "$TURBO_ROOT$/turbo.json"],
       "env": [
         "NODE_ENV",
         "PROCESS_ROLE",

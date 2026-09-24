@@ -450,7 +450,7 @@ git commit -m "feat(persian): add the Persian normalization, formatting and vali
 
 ## Task 2: `@ds/contracts` — common shapes and the error contract
 
-§8.1, minus `catalog/brand.ts`, which belongs to Phase 3's reference slice. This exists now because Task 6's exception filter emits the shape `ProblemDetailsSchema` describes and uses `ErrorCode` as its enum — defining them locally and reconciling later would mean writing the same thing twice.
+§8.1's `common/` and `errors/` — `id`, `slug`, `persianText`, `PageQuerySchema`, `paginated`, `ErrorCode` and `ProblemDetailsSchema`. Not `catalog/brand.ts`, which belongs to Phase 3's reference slice, and not §8.1's four Iranian-format refinements, which are deferred for the reason recorded under Phase 2 completion. This exists now because Task 6's exception filter emits the shape `ProblemDetailsSchema` describes and uses `ErrorCode` as its enum — defining them locally and reconciling later would mean writing the same thing twice.
 
 **Files:**
 
@@ -3841,7 +3841,7 @@ Required effect: **`SIGTERM` completes shutdown well inside a 10 s grace period 
 
 ```bash
 pnpm --filter api build && pnpm --filter api test:integration
-PROCESS_ROLE=all node apps/api/dist/main.js &
+PROCESS_ROLE=all pnpm --filter api start &
 node -e "setTimeout(async()=>{const r=await fetch('http://127.0.0.1:3001/health/ready');console.log(r.status,(await r.text()).slice(0,200))},3000)"
 kill %1
 pnpm check
@@ -4003,10 +4003,14 @@ pnpm --filter api openapi      # writes openapi.json with no services running
 pnpm audit:authors             # only Saman
 ```
 
-and `PROCESS_ROLE=all node apps/api/dist/main.js` answers `GET /health/ready` with 200 and an `outbox.dead` detail.
+and `PROCESS_ROLE=all pnpm --filter api start` answers `GET /health/ready` with 200 and an `outbox.dead` detail. It must be run that way, or from `apps/api`: `ConfigModule.forRoot({ envFilePath: '.env' })` resolves against `process.cwd()`, and `node apps/api/dist/main.js` from the repo root finds no `.env` and exits with "The environment failed validation; nothing can be built from it." `pnpm --filter api start` runs the script with `apps/api` as its working directory, from anywhere.
 
 Spec **DoD 4** (outbox `runOnce()` success/retry/park plus the S3 smoke test) and **DoD 8** (ADR-0001, done in the spike) are satisfied. Then one rebase-merge PR, `feat/api-foundation` → `main`, per [ADR-0018](../../decisions/0018-one-pr-per-phase.md).
 
-**Deliberately deferred from §5.3.** That section lists `src/shared/` as holding a minimal `Money` value object. Nothing in Phase 2 has a price — Brand has no money, and the `money` contract schema is explicitly a products-spec concern (§4.5). Building an untested value object now would be dead code that the first real consumer would reshape anyway, so `Money` arrives with the first priced aggregate. Everything else §5.3 names — the `AppError` hierarchy, pagination helpers, ids, and the OpenAPI helpers — is built here.
+**Deliberately deferred from §5.3.** That section lists `src/shared/` as holding a minimal `Money` value object. Nothing in Phase 2 has a price — Brand has no money, and the `money` contract schema is explicitly a products-spec concern (§4.5). Building an untested value object now would be dead code that the first real consumer would reshape anyway, so `Money` arrives with the first priced aggregate. Everything else §5.3 names — the `AppError` hierarchy, pagination helpers and the OpenAPI helpers — is built here.
+
+**Deliberately deferred from §8.1.** That section also asks `packages/contracts/src/common/` to hold `iranMobile`, `nationalId`, `postalCode` and `sheba` as refinements over the `@ds/persian` validators. They are not built. Nothing in Phase 2 consumes them — they are customer and identity shapes, and neither context exists yet — while the predicates they would wrap (`isIranMobile`, `isNationalId`, `isPostalCode`, `isSheba`) are already built and tested in `@ds/persian` by Task 1, so nothing is lost but four `.refine()` wrappers with no caller. That is the same argument as `Money`, and this branch has its own evidence for it: `newId()` was built to spec, went unconsumed for seventeen tasks and was removed at final review. The first consumer is Phase 3's identity slice, which needs `iranMobile` for phone-keyed OTP login; `nationalId`, `postalCode` and `sheba` follow with the customers context.
+
+**Removed at final review: `newId()`.** §5.3 lists ids in `src/shared/`, and Task 10 built them. Nothing in Phase 2 mints a UUID primary key — `outbox_events.id` is a bigint identity and `aggregate_id` comes from the caller — so `newId()` ended the phase with no importer outside its own test, as the sole consumer of the `uuid` dependency, and as the only member of `src/shared/` or `src/infra/` outside the `index.ts` barrel convention. ADR-0004 is unaffected and still decides the question it decided: PostgreSQL 16 has no `uuidv7()`, so UUIDv7 is generated in application code with the `uuid` package. It returns with the first aggregate that needs one, behind a barrel, in the commit that gives it a consumer.
 
 **Not in Phase 2:** `@ds/api-client`, `apps/web`, `catalog/brand.ts` and the Brand module, the seed, Docker images, the `openapi`/`e2e`/`docker` CI jobs, Liara and ArvanCloud. Phase 3 begins with the reference slice, whose contracts build on Task 2's `common/` and `errors/`.

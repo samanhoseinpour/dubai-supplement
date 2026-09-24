@@ -5,3 +5,4 @@ coverage
 .turbo
 **/src/generated
 **/openapi.json
+**/drizzle/meta

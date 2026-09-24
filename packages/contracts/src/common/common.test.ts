@@ -27,10 +27,19 @@ describe('persianText', () => {
     expect(() => persianText(50).parse('')).toThrow()
   })
 
-  it('rejects whitespace-only input but never trims what it accepts', () => {
+  it('rejects whitespace-only input', () => {
     expect(() => persianText(50).parse('   ')).toThrow()
     expect(persianText(50).parse('یک')).toBe('یک')
-    expect(persianText(50).parse(' یک ')).toBe(' یک ')
+  })
+
+  // normalizePersian trims, so the padding is gone before .max() counts and
+  // before anything is stored. Both halves matter: the declared limit is the
+  // limit, and «  نایک  » does not reach a slug or a uniqueness comparison
+  // with its spaces attached.
+  it('trims, so padding neither reaches storage nor counts toward the limit', () => {
+    expect(persianText(50).parse('  نایک  ')).toBe('نایک')
+    expect(persianText(4).parse('  نایک  ')).toBe('نایک')
+    expect(() => persianText(3).parse('  نایک  ')).toThrow()
   })
 })
 

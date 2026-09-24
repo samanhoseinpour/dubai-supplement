@@ -11,18 +11,19 @@ export const slug = z
 /**
  * HTTP inputs are normalized here; the domain entity normalizes again on
  * write (§6.3), so both paths agree. Zod 4.6 counts code points, which is
- * the semantics we want — a ZWNJ costs one. Whitespace-only input is
- * rejected but never trimmed: `@ds/persian` stays the single authority on
- * what stored text looks like, so no second normalization happens here.
+ * the semantics we want — a ZWNJ costs one.
+ *
+ * Nothing is normalized a second time in this package: `normalizePersian`
+ * trims, so `.max(max)` measures the text that will be stored rather than
+ * the padding a client happened to send, and `'   '` reaches `.min(1)` as
+ * `''`. A `.refine(s => s.trim().length > 0)` after that preprocess could
+ * never fire — a dead guard reads as a check and is not one — so the blank
+ * case is left to `.min(1)`, which is the assertion that actually runs.
  */
 export function persianText(max: number): z.ZodType<string> {
   return z.preprocess(
     (v) => (typeof v === 'string' ? normalizePersian(v) : v),
-    z
-      .string()
-      .min(1)
-      .max(max)
-      .refine((s) => s.trim().length > 0, 'must not be blank'),
+    z.string().min(1).max(max),
   )
 }
 

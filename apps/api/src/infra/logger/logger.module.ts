@@ -81,8 +81,14 @@ export class LoggerModule implements OnModuleInit {
   onModuleInit(): void {
     // A worker or a script context has no HTTP adapter and no requests to id;
     // Nest types the host as always populated, which it is not there.
-    const adapter = this.adapterHost.httpAdapter as AbstractHttpAdapter | undefined
-    if (adapter === undefined) return
+    //
+    // `null`, not `undefined` — measured against @nestjs/core 12.0.4, by
+    // resolving HttpAdapterHost out of a `createApplicationContext` graph.
+    // While this read `=== undefined` alone, `src/worker.ts` could not boot
+    // AppModule at all: `Cannot read properties of null (reading
+    // 'getInstance')`, thrown from here during the context's init.
+    const adapter = this.adapterHost.httpAdapter as AbstractHttpAdapter | null | undefined
+    if (adapter === null || adapter === undefined) return
     adapter.getInstance<RequestIdAssignable>().setGenReqId(requestId)
   }
 }

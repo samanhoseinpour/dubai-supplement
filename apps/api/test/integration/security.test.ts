@@ -73,7 +73,7 @@ interface Ctx {
  * 429] into [429, 429, 429]. It is the container's, never a shared instance.
  */
 async function build(config: AppConfig, limit: number): Promise<Ctx> {
-  await flushRedis()
+  await flushRedis(config.redisUrl)
   const redis = new Redis(config.redisUrl)
 
   @Module({
@@ -323,7 +323,7 @@ describe('security wiring', () => {
     beforeAll(async () => {
       const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
       const config = moduleRef.get(AppConfig)
-      await flushRedis()
+      await flushRedis(config.redisUrl)
       redis = new Redis(config.redisUrl)
       app = moduleRef.createNestApplication<NestFastifyApplication>(
         new FastifyAdapter({ logger: false, trustProxy: config.trustProxy }),

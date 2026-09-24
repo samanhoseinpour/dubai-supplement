@@ -102,7 +102,34 @@ export async function setup(project: TestProject): Promise<void> {
   }).catch((error: unknown) => {
     throw new Error(`[containers] migrating the container database failed:\n${String(error)}`)
   })
-  if (stderr !== '') throw new Error(`[containers] the migrator wrote to stderr:\n${stderr}`)
+  const unexpected = withoutNodeWarnings(stderr)
+  if (unexpected !== '') {
+    throw new Error(`[containers] the migrator wrote to stderr:\n${stderr}`)
+  }
+}
+
+/**
+ * Node's own warnings, dropped. They arrive on stderr and are not the
+ * migrator's doing: `.node-version` pins a major and `actions/setup-node`
+ * resolves the latest patch, so a release that adds an ExperimentalWarning or
+ * a DeprecationWarning on a path `pg` or `drizzle` touches would otherwise
+ * turn CI red with nothing changed in the repository. A real failure is a
+ * non-zero exit, which rejects above, and prints `[migrate] failed:`, which
+ * survives this filter — as does anything else the migrator writes.
+ */
+function withoutNodeWarnings(stderr: string): string {
+  return stderr
+    .split('\n')
+    .filter(
+      (line) =>
+        line.trim() !== '' &&
+        // `(node:12345) ExperimentalWarning: …`, the trace-warnings hint that
+        // may follow it, and the stack frames `--trace-warnings` adds.
+        !/^\(node:\d+\) /u.test(line) &&
+        !line.startsWith('(Use `node --trace-warnings') &&
+        !/^\s+at /u.test(line),
+    )
+    .join('\n')
 }
 
 export async function teardown(): Promise<void> {

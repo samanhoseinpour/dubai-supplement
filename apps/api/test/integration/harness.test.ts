@@ -10,9 +10,15 @@ import { flushRedis, truncateAll } from '../setup/truncate.js'
  * The harness proving itself. A global setup that silently failed to write
  * DATABASE_URL would leave every other file in this directory running against
  * whatever `apps/api/.env` the developer happens to have — green, and for the
- * wrong reason. So what the containers produced is compared with what the
- * tests received, through two channels that cannot fail together: vitest's
- * provided context, and process.env as the worker inherited it.
+ * wrong reason.
+ *
+ * Three tests, pinning three different things, and only together. The first
+ * pins propagation and nothing else: the provided context and process.env are
+ * written from one object in one function, so their agreeing says the worker
+ * inherited the main process's writes — a setup that computed a wrong URL
+ * would write the same wrong URL to both and pass. The second says the URLs
+ * are a container's rather than the compose stack's. The third says that is
+ * what the application is actually built from, `.env` notwithstanding.
  */
 const containers = inject('containers')
 

@@ -16,14 +16,17 @@ export async function truncateAll(db: Db, tables: string[]): Promise<void> {
 }
 
 /**
- * The container's Redis, emptied. Never a fallback URL: an unset REDIS_URL
- * would send `flushdb` to whatever is listening on localhost:6379 — the
- * developer's own dev stack.
+ * The container's Redis, emptied. `url` defaults to what the global setup
+ * wrote, and a caller holding an `AppConfig` passes `config.redisUrl` so the
+ * instance flushed is the instance it then asserts against — by construction,
+ * not because the two happen to agree today.
+ *
+ * Never a fallback: an absent URL would send `flushdb` to whatever is
+ * listening on localhost:6379, which is the developer's own dev stack.
  */
-export async function flushRedis(): Promise<void> {
-  const url = process.env.REDIS_URL
+export async function flushRedis(url = process.env.REDIS_URL): Promise<void> {
   if (url === undefined || url === '') {
-    throw new Error('flushRedis() needs REDIS_URL; the Testcontainers global setup writes it.')
+    throw new Error('flushRedis() needs a Redis URL; the Testcontainers global setup writes one.')
   }
   const redis = new Redis(url)
   try {

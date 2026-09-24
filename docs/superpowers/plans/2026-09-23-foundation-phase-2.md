@@ -3823,17 +3823,17 @@ if (process.env.PROCESS_ROLE === 'worker') {
 }
 ```
 
-- [ ] **Step 3: SIGTERM during a Redis outage must not hang the container**
+- [ ] **Step 3: SIGTERM during a Redis outage must not outlast the grace period**
 
 **Added 2026-09-24, from a defect Task 15 reported against Task 14's `RedisModule` and deliberately did not fix.** Verify it before you fix it — I have not reproduced it myself, and this plan has carried unverified mechanism claims before.
 
-The claim: `RedisCloser.onApplicationShutdown` calls `await this.redis.quit()`, and during a Redis outage that **never returns**, so `app.close()` never returns either. Note what the existing comment in `redis.module.ts` actually measured — `quit()` on a **lazyConnect client that never ran a command** (status `wait`), which resolves in under a millisecond. A client that was connected and is now `reconnecting` is a different state, and the comment does not cover it. The guard there is `if (this.redis.status === 'end') return`, which catches neither.
+**Re-scoped 2026-09-24 after measurement. Task 15 reported this as "`app.close()` never returns"; that is FALSE and the review disproved it — which is why this step was written as verify-then-fix rather than as an instruction.** What is actually true:
 
-This is Task 16's, not Task 15's, because it is the same deliverable as the relay properties above: what happens when the process is told to stop. A container that ignores `SIGTERM` is killed by the platform after its grace period, which turns every deploy during a Redis blip into a hard kill.
+`RedisCloser.onApplicationShutdown` calls `await this.redis.quit()`. During a Redis outage that call is **bounded by ioredis's `maxRetriesPerRequest: 20`** and it **resolves** rather than rejecting, so later shutdown hooks still run. Measured: `await app.close()` on the real `AppModule` against a dead Redis took **4523 ms**, and three standalone runs took **4544 / 6543 / 10267 ms**; bare `ioredis.quit()` mid-reconnect settled at **9066 ms**.
 
-Required effect: **`SIGTERM` shuts the process down within the platform's grace period whether or not Redis is answering**, and shutdown still drains what is genuinely in flight. Mechanism yours — a bounded wait, a status check that covers `reconnecting`, `disconnect()` as the fallback after `quit()` has had its chance; decide it and say why. Pin it with a test that hangs (or fails a deadline) against today's code.
+So it is not a hang. It is **graceful shutdown delayed by up to ~10.5 s, with a `MaxRetriesPerRequestError` logged on the way out** — and Docker's and Liara's `SIGTERM` grace is commonly **10 s**. The container is not guaranteed to be hard-killed; it is a coin flip decided by how far into its reconnect cycle the client was when the signal arrived. Intermittent hard kills during deploys are worse to diagnose than consistent ones.
 
-If it does **not** reproduce, say so plainly, leave the code alone, and record what you measured. A reported defect that turns out not to exist is a fine outcome; quietly changing code to satisfy a claim nobody verified is not.
+Required effect: **`SIGTERM` completes shutdown well inside a 10 s grace period whether or not Redis is answering**, and shutdown still drains what is genuinely in flight. Mechanism yours — a bounded wait with `disconnect()` as the fallback once `quit()` has had its chance, a status check that covers `reconnecting`, a shorter `maxRetriesPerRequest` for the shutdown path; decide it and say why you picked the bound. Pin it with a test that fails a deadline against today's code, not one that asserts a hang, because there is no hang to assert.
 
 - [ ] **Step 4: Verify and commit**
 

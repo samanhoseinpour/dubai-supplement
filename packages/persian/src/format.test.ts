@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TEHRAN_TZ, formatJalali, formatNumber, formatToman } from './format.js'
+import { TEHRAN_TZ, formatJalali, formatJalaliYear, formatNumber, formatToman } from './format.js'
 
 describe('formatToman', () => {
   it('divides rial minor units by ten and labels the result', () => {
@@ -36,5 +36,22 @@ describe('formatNumber', () => {
   it('groups with the Persian separator and Persian digits', () => {
     expect(formatNumber(1234567)).not.toMatch(/[0-9]/)
     expect(formatNumber(1234567)).toContain('٬')
+  })
+})
+
+describe('formatJalaliYear', () => {
+  it('returns the Jalali year in Persian digits', () => {
+    expect(formatJalaliYear(new Date('2026-09-25T12:00:00Z'))).toBe('۱۴۰۵')
+  })
+
+  it('turns the year over at midnight in Tehran, not in UTC', () => {
+    // 1 Farvardin 1405 is 2026-03-21. Tehran is UTC+03:30, so 19:00Z is still
+    // 22:30 on 29 Esfand 1404 and 21:00Z is 00:30 on 1 Farvardin 1405.
+    expect(formatJalaliYear(new Date('2026-03-20T19:00:00Z'))).toBe('۱۴۰۴')
+    expect(formatJalaliYear(new Date('2026-03-20T21:00:00Z'))).toBe('۱۴۰۵')
+  })
+
+  it('emits no ASCII digit', () => {
+    expect(formatJalaliYear(new Date())).not.toMatch(/[0-9]/)
   })
 })

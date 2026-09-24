@@ -15,6 +15,11 @@ const jalaliLong = new Intl.DateTimeFormat('fa-IR', {
   timeZone: TEHRAN_TZ,
   dateStyle: 'long',
 })
+const jalaliYear = new Intl.DateTimeFormat('fa-IR', {
+  calendar: 'persian',
+  timeZone: TEHRAN_TZ,
+  year: 'numeric',
+})
 
 export function formatNumber(value: number | bigint): string {
   return numberFormat.format(value)
@@ -32,4 +37,9 @@ export function formatToman(amountMinorIrr: bigint): string {
 /** Server-side only — formatting on the client risks an ICU hydration mismatch (§7.3). */
 export function formatJalali(date: Date, style: 'short' | 'long' = 'short'): string {
   return style === 'long' ? jalaliLong.format(date) : jalaliShort.format(date)
+}
+
+/** The Jalali year in Persian digits — «۱۴۰۵» for any instant of 1405, Tehran time. */
+export function formatJalaliYear(date: Date): string {
+  return jalaliYear.format(date)
 }

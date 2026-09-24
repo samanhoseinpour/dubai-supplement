@@ -1,1 +1,358 @@
 @import 'tailwindcss';
+
+/*
+ * The design system's single source of truth (spec §5–§7). Every colour,
+ * size, radius, shadow and duration a component uses is a token here;
+ * test/tokens.test.ts re-derives the neutrals and checks every pair.
+ */
+
+/* ---------- 1. Two colours are a fact (§5.1) ---------- */
+
+@theme {
+  /* Tailwind's palette and scales are deleted: bg-blue-500, text-xl,
+     shadow-lg, rounded-xl, ease-in-out and font-light do not exist here. */
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --ease-*: initial;
+  --animate-*: initial;
+  --font-weight-*: initial;
+
+  --color-iris: #080813;
+  --color-frozen: #a0bddb;
+
+  --font-sans: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
+
+  /* §6.1 — five weights, five roles */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* §6.2 — the scale; each size carries its leading */
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.6;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.7;
+  --text-body: 1rem;
+  --text-body--line-height: 1.85;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.75;
+  --text-title-sm: 1.25rem;
+  --text-title-sm--line-height: 1.5;
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.45;
+  --text-headline: clamp(1.75rem, 1.4rem + 1.5vw, 2.25rem);
+  --text-headline--line-height: 1.3;
+  --text-display: clamp(2.25rem, 1.75rem + 2.5vw, 3.5rem);
+  --text-display--line-height: 1.2;
+
+  /* §5.4 — radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+
+  /* §5.4 — elevation, always the page's own ink at alpha */
+  --shadow-sm:
+    0 1px 2px color-mix(in srgb, var(--color-iris) 8%, transparent),
+    0 1px 1px color-mix(in srgb, var(--color-iris) 4%, transparent);
+  --shadow-md:
+    0 4px 12px color-mix(in srgb, var(--color-iris) 12%, transparent),
+    0 2px 4px color-mix(in srgb, var(--color-iris) 6%, transparent);
+  --shadow-material:
+    0 8px 24px color-mix(in srgb, var(--color-iris) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-iris) 8%, transparent);
+
+  /* §7.2 — motion */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(1, 0, 0.8, 1);
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-spin: spin 1s linear infinite;
+
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+/* ---------- 2. Semantic tokens under shadcn's names (§5.2–§5.3) ---------- */
+/* Text-carrying tokens are solid hex. Alpha appears only on --border and
+   --input. Percentages are "ink mixed over surface" in sRGB. */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --background: #fafafc;
+  --foreground: #080813;
+  --card: #ffffff;
+  --card-foreground: #080813;
+  --popover: #ffffff;
+  --popover-foreground: #080813;
+  --primary: #a0bddb;
+  --primary-foreground: #080813;
+  --secondary: #ebebee;
+  --secondary-foreground: #080813;
+  --muted: #f0f0f3;
+  --muted-foreground: #64646c;
+  --accent: #e4ebf4;
+  --accent-foreground: #080813;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --border: color-mix(in srgb, var(--color-iris) 12%, transparent);
+  --input: color-mix(in srgb, var(--color-iris) 48%, transparent);
+  --ring: #080813;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #080813;
+  --foreground: #a0bddb;
+  --card: #11131f;
+  --card-foreground: #a0bddb;
+  --popover: #11131f;
+  --popover-foreground: #a0bddb;
+  --primary: #a0bddb;
+  --primary-foreground: #080813;
+  --secondary: #1a1e2b;
+  --secondary-foreground: #a0bddb;
+  --muted: #141623;
+  --muted-foreground: #72879f;
+  --accent: #232937;
+  --accent-foreground: #a0bddb;
+  --destructive: #f28b82;
+  --destructive-foreground: #080813;
+  --border: color-mix(in srgb, var(--color-frozen) 16%, transparent);
+  --input: color-mix(in srgb, var(--color-frozen) 52%, transparent);
+  --ring: #a0bddb;
+}
+
+/* Non-colour tokens that are not Tailwind namespaces (§5.4, §7.2). */
+:root {
+  --duration-press: 100ms;
+  --duration-quick: 150ms;
+  --duration-fade: 200ms;
+  --z-header: 10;
+  --z-overlay: 20;
+  --z-sheet: 30;
+  --z-toast: 40;
+  --container-page: 75rem;
+  --container-prose: 42rem;
+}
+
+/* §7.4 — a user who asked for more contrast gets solid boundaries and a
+   thicker ring. */
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme='light'] {
+    --border: var(--color-iris);
+    --input: var(--color-iris);
+  }
+  [data-theme='dark'] {
+    --border: var(--color-frozen);
+    --input: var(--color-frozen);
+  }
+  :focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* ---------- 3. The tokens as utilities: bg-background, text-primary-foreground … ---------- */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* `dark:` follows the attribute next-themes sets, never the OS alone (§5.6);
+   the nested selector is what lets a gallery panel force a theme. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ---------- 4. Base ---------- */
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    /* §6.4 — any digit that reaches the page still renders Persian. */
+    font-feature-settings: 'ss01';
+    /* §6.3 — never set; connected letters tear apart under tracking. */
+    letter-spacing: normal;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-block-size: 100dvh;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  /* The e-commerce convention (§9, Jakob) — shadcn's --pointer, by hand. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* §7.1 — instant, 2 px, 2 px outside the control so it sits on the page. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
+  /* §5.6 — the theme switch is one whole-page cross-fade. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--duration-fade);
+    animation-timing-function: var(--ease-out);
+  }
+}
+
+/* ---------- 5. Utilities (§5.4, §5.5, §7, §8.1) ---------- */
+
+@utility container-page {
+  inline-size: 100%;
+  max-inline-size: var(--container-page);
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @variant md {
+    padding-inline: 1.5rem;
+  }
+}
+
+@utility prose {
+  max-inline-size: var(--container-prose);
+}
+
+/* §5.5 — floating chrome; solid when the user prefers it. */
+@utility material {
+  background-color: color-mix(in srgb, var(--color-background) 72%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-material);
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* §7.1 — respond on pointer-down; colours and shadow follow on hover.
+   Under reduced motion the press is gone and only colours cross-fade. */
+@utility press {
+  transition-property: transform, color, background-color, border-color, box-shadow, opacity;
+  transition-duration:
+    var(--duration-press), var(--duration-quick), var(--duration-quick), var(--duration-quick),
+    var(--duration-quick), var(--duration-quick);
+  transition-timing-function: var(--ease-out);
+  &:active {
+    transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition-property: color, background-color, border-color, box-shadow, opacity;
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+@utility focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  &:focus-visible {
+    outline-color: var(--color-ring);
+  }
+}
+
+/* §7.1 — overlays materialise from their trigger and leave the same way. */
+@utility popup {
+  transform-origin: var(--transform-origin);
+  transition-property: opacity, transform;
+  transition-duration: var(--duration-quick);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  &[data-ending-style] {
+    transition-timing-function: var(--ease-in);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition-property: opacity;
+    &[data-starting-style],
+    &[data-ending-style] {
+      transform: none;
+    }
+  }
+}
+
+/* §8.1 — the shimmer, static under reduced motion. */
+@utility skeleton {
+  background-color: var(--color-muted);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-muted) 0%,
+    var(--color-secondary) 50%,
+    var(--color-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-image: none;
+  }
+}
+
+/* §5.4 — the only z-indices; numeric z-<n> is banned by lint. */
+@utility z-header {
+  z-index: var(--z-header);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-sheet {
+  z-index: var(--z-sheet);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
+}

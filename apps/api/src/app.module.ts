@@ -3,17 +3,23 @@ import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { Redis } from 'ioredis'
 import { AppConfig, ConfigModule } from './infra/config/index.js'
+import { DbModule } from './infra/db/index.js'
 import { HealthModule } from './infra/health/health.module.js'
 import { buildThrottlerOptions } from './infra/http/index.js'
 import { LoggerModule } from './infra/logger/index.js'
 
-// Config, logging, the global throttler and health. Validation, the problem
-// filter and the security plugins are wired in main.ts; the data layer
-// arrives with its own Phase 2 tasks.
+// Config, logging, the data layer, the global throttler and health.
+// Validation, the problem filter and the security plugins are wired in
+// main.ts.
 @Module({
   imports: [
     ConfigModule,
     LoggerModule,
+    // @Global() decides who may inject DRIZZLE, not whether the module is
+    // built: one import into the root graph is still what instantiates it.
+    // Nothing connects here — the pool opens its first client on the first
+    // query, which is what lets src/openapi.ts boot with no stores (§5.5).
+    DbModule,
     // Until the data layer provides the shared Redis client, the throttler
     // owns a lazily connecting one of its own — built from the validated
     // config, never from process.env. `imports` names where the factory's

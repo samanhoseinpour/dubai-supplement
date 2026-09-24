@@ -42,4 +42,39 @@ describe('src/migrate.ts', () => {
     })
     expect((failure as { stderr: string }).stderr).toContain('ECONNREFUSED')
   }, 30_000)
+
+  // The deploy log and the test above both grep for one line, so the
+  // environment gate has to produce it too: parsed outside the try, an
+  // invalid NODE_ENV still exits 1 but prints a bare ZodError instead.
+  it('reports an invalid environment through the same failure line', async () => {
+    const failure: unknown = await run(process.execPath, [tsxCli, 'src/migrate.ts'], {
+      cwd: apiRoot,
+      env: { ...env, NODE_ENV: 'nope' },
+    }).then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    expect(failure).toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining('[migrate] failed:') as string,
+    })
+    // The offending key, so the operator is not left reading a stack trace.
+    expect((failure as { stderr: string }).stderr).toContain('NODE_ENV')
+  }, 30_000)
+})
+
+describe('src/infra/db/migration-lock.ts', () => {
+  // Task 11 consumes MIGRATION_LOCK_KEY, so evaluating the module that owns
+  // it must do nothing at all. While the constant lived in migrate.ts this
+  // same run exited 1 with `[migrate] failed:` — naming the key would have
+  // migrated the importer's database, and under vitest, silently.
+  it('evaluates without opening a connection or printing anything', async () => {
+    const { stdout, stderr } = await run(
+      process.execPath,
+      [tsxCli, 'src/infra/db/migration-lock.ts'],
+      { cwd: apiRoot, env },
+    )
+    expect(stderr).toBe('')
+    expect(stdout).toBe('')
+  }, 30_000)
 })

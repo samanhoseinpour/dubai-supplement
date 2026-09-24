@@ -6,9 +6,11 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import type { OpenAPIObject, ReferenceObject, SchemaObject } from '@nestjs/swagger'
 import { ThrottlerStorage } from '@nestjs/throttler'
 import type { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
+import type { Pool } from 'pg'
 import { z } from 'zod'
 import { ERROR_CODES, persianText, ProblemDetailsSchema } from '@ds/contracts'
 import type * as ConfigBarrel from '../../src/infra/config/index.js'
+import type * as DbBarrel from '../../src/infra/db/index.js'
 import { ApiZodResponse, buildDocument } from '../../src/shared/openapi/index.js'
 
 const WidgetSchema = z.object({ id: z.uuid(), label: z.string().max(10) })
@@ -117,6 +119,7 @@ describe('OpenAPI generation', () => {
     let app: NestFastifyApplication
     let doc: OpenAPIObject
     let config: typeof ConfigBarrel
+    let dbBarrel: typeof DbBarrel
 
     beforeAll(async () => {
       vi.stubEnv('DATABASE_URL', 'postgres://dubaisupp:dubaisupp@127.0.0.1:1/dubaisupp')
@@ -130,6 +133,9 @@ describe('OpenAPI generation', () => {
       vi.resetModules()
       const { AppModule } = await import('../../src/app.module.js')
       config = await import('../../src/infra/config/index.js')
+      // After resetModules the graph holds a freshly created PG_POOL symbol;
+      // a static import here would be a different symbol and resolve nothing.
+      dbBarrel = await import('../../src/infra/db/index.js')
       moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
       app = moduleRef.createNestApplication<NestFastifyApplication>(
         new FastifyAdapter({ logger: false }),
@@ -148,6 +154,13 @@ describe('OpenAPI generation', () => {
       // line, a stub that missed the boot would prove nothing.
       expect(moduleRef.get(config.AppConfig).databaseUrl).toContain('127.0.0.1:1/')
       expect(Object.keys(doc.paths)).toContain('/health/live')
+    })
+
+    // Booting against a closed port catches a pool that connects and awaits;
+    // it cannot catch `void pool.query(...)`, whose rejection never reaches
+    // init(). The count does: pg checks a client out on the first query.
+    it('opens no Postgres connection', () => {
+      expect(moduleRef.get<Pool>(dbBarrel.PG_POOL).totalCount).toBe(0)
     })
 
     it('opens no Redis connection', () => {

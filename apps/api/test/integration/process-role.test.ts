@@ -1,6 +1,9 @@
+import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import net from 'node:net'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fileURLToPath } from 'node:url'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { Logger } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { eq } from 'drizzle-orm'
@@ -15,6 +18,7 @@ import {
   type RelayCycle,
 } from '../../src/infra/outbox/index.js'
 import { REDIS, REDIS_QUIT_TIMEOUT_MS } from '../../src/infra/redis/index.js'
+import { withDb, type DbFixture } from '../setup/fixture.js'
 
 /**
  * §5.2: `api` serves HTTP, `all` serves HTTP and runs the relay in the same
@@ -59,6 +63,21 @@ const WORKER_DELIVERY_MS = 15_000
  * returns here.
  */
 const QUIET_AFTER_CLOSE_MS = 3_000
+
+/** The spawned entrypoint's own poll, so a started relay is seen at once. */
+const CHILD_POLL_MS = 50
+
+/** Boot budget for a spawned entrypoint: connect a pool, a client, listen. */
+const CHILD_BOOT_MS = 30_000
+
+/** Many poll periods, so a started relay could not have missed the row. */
+const CHILD_DELIVERY_MS = 10_000
+
+/**
+ * And the silence the other way. Forty `CHILD_POLL_MS` periods: a relay that
+ * was running would have taken the row dozens of times over.
+ */
+const CHILD_SILENCE_MS = 2_000
 
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => {
@@ -289,6 +308,200 @@ describe('PROCESS_ROLE', () => {
 })
 
 /**
+ * What a container actually runs, compiled rather than through tsx.
+ *
+ * Not a preference: `main.ts` boots the Nest graph, and Nest resolves a
+ * constructor dependency declared by class from `design:paramtypes`, which
+ * tsx's esbuild transform does not emit. Measured — `tsx src/main.ts` dies at
+ * the first such provider with `TypeError: Cannot read properties of
+ * undefined (reading 's3')` inside `S3StorageProvider`, having injected
+ * `undefined` for its AppConfig. `src/migrate.test.ts` may use tsx because
+ * `migrate.ts` creates no Nest context at all (§4.2);
+ * `test/integration/migrate-lock.test.ts` runs the migrator from `dist/` for
+ * the same "this is the deploy's code path" reason this file does.
+ *
+ * `api#test:integration` declares `dependsOn: ["build"]` — its own package's
+ * build, not just `^build` — and `test/setup/containers.ts` refuses to start
+ * anything when the file is missing, so this cannot degrade into a test that
+ * silently passes because nobody built.
+ */
+const mainEntrypoint = fileURLToPath(new URL('../../dist/main.js', import.meta.url))
+const apiRoot = fileURLToPath(new URL('../../', import.meta.url))
+
+/** A port nothing holds. Claimed and released, so the child may take it. */
+async function freePort(): Promise<number> {
+  const probe = net.createServer()
+  await new Promise<void>((resolve) => {
+    probe.listen(0, '127.0.0.1', resolve)
+  })
+  const address = probe.address()
+  if (address === null || typeof address === 'string') {
+    throw new Error('expected a TCP address from the port probe')
+  }
+  const { port } = address
+  await new Promise<void>((resolve) => {
+    probe.close(() => {
+      resolve()
+    })
+  })
+  return port
+}
+
+/**
+ * Every key the schema knows, so the developer's `apps/api/.env` decides
+ * nothing — the argument `src/migrate.test.ts` makes for the same reason. The
+ * store URLs come from the validated snapshot rather than raw `process.env`,
+ * which is what makes them the suite's own containers by construction.
+ */
+function childEnv(role: string, port: number): NodeJS.ProcessEnv {
+  const env = validatedEnv()
+  return {
+    ...process.env,
+    NODE_ENV: 'test',
+    PROCESS_ROLE: role,
+    PORT: String(port),
+    LOG_LEVEL: 'fatal',
+    DATABASE_URL: env.DATABASE_URL,
+    DATABASE_POOL_MAX: '5',
+    REDIS_URL: env.REDIS_URL,
+    S3_ENDPOINT: env.S3_ENDPOINT,
+    S3_REGION: env.S3_REGION,
+    S3_BUCKET: env.S3_BUCKET,
+    S3_ACCESS_KEY_ID: env.S3_ACCESS_KEY_ID,
+    S3_SECRET_ACCESS_KEY: env.S3_SECRET_ACCESS_KEY,
+    S3_FORCE_PATH_STYLE: 'true',
+    CORS_ORIGINS: '',
+    TRUST_PROXY: 'loopback,uniquelocal',
+    OUTBOX_POLL_MS: String(CHILD_POLL_MS),
+    OPENAPI_UI_ENABLED: 'false',
+  }
+}
+
+interface Entrypoint {
+  readonly port: number
+  stop: () => Promise<void>
+}
+
+/**
+ * `node dist/main.js` under a role, up and answering. Returning only once
+ * `/health/live` is 200 is what makes the negative test below mean something:
+ * the row it finds unpublished was passed over by a process that was
+ * demonstrably running, not by one that never started.
+ */
+async function startMain(role: string): Promise<Entrypoint> {
+  const port = await freePort()
+  const child = spawn(process.execPath, [mainEntrypoint], {
+    cwd: apiRoot,
+    env: childEnv(role, port),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  let output = ''
+  child.stdout.on('data', (chunk: Buffer) => {
+    output += chunk.toString()
+  })
+  child.stderr.on('data', (chunk: Buffer) => {
+    output += chunk.toString()
+  })
+  const exited = new Promise<void>((resolve) => {
+    child.on('exit', () => {
+      resolve()
+    })
+  })
+
+  const live = await within(CHILD_BOOT_MS, async () => {
+    try {
+      const res = await fetch(`http://127.0.0.1:${String(port)}/health/live`)
+      return res.status === 200
+    } catch {
+      // Not up yet — or never will be, which the deadline decides.
+      return false
+    }
+  })
+  if (!live) {
+    child.kill('SIGKILL')
+    await exited
+    throw new Error(
+      `PROCESS_ROLE=${role} never answered /health/live on port ${String(port)}:\n${output}`,
+    )
+  }
+
+  return {
+    port,
+    stop: async () => {
+      child.kill('SIGTERM')
+      await exited
+    },
+  }
+}
+
+/**
+ * The half of §5.2 that lives in `main.ts`, which no in-process test can
+ * reach: `bootstrap()` is not exported and listens at import. Deleting the
+ * role switch leaves the whole suite green; inverting it — so an `api`
+ * container becomes a second outbox consumer and `all` publishes nothing —
+ * passes lint and tsc too. Only running the entrypoint sees either.
+ */
+describe('PROCESS_ROLE in the compiled entrypoint', () => {
+  let fixture: DbFixture
+  let db: Db
+
+  beforeAll(async () => {
+    fixture = await withDb()
+    db = fixture.db
+  })
+
+  afterAll(async () => {
+    await fixture.close()
+  })
+
+  /** One unpublished row, under an aggregate id nothing else uses. */
+  async function seedEvent(): Promise<string> {
+    const aggregateId = randomUUID()
+    await db.insert(outboxEvents).values({
+      aggregateType: 'process-role',
+      aggregateId,
+      eventType: 'test.entrypoint.booted',
+      payload: { id: aggregateId },
+      occurredAt: new Date(),
+    })
+    return aggregateId
+  }
+
+  const published = (aggregateId: string) => async (): Promise<boolean> => {
+    const [row] = await db
+      .select()
+      .from(outboxEvents)
+      .where(eq(outboxEvents.aggregateId, aggregateId))
+    return row !== undefined && row.publishedAt !== null
+  }
+
+  it('runs the relay inside the HTTP app under all', async () => {
+    const aggregateId = await seedEvent()
+    const main = await startMain('all')
+    try {
+      expect(await within(CHILD_DELIVERY_MS, published(aggregateId))).toBe(true)
+    } finally {
+      await main.stop()
+      await db.delete(outboxEvents).where(eq(outboxEvents.aggregateId, aggregateId))
+    }
+  })
+
+  it('serves HTTP and leaves the relay stopped under api', async () => {
+    const aggregateId = await seedEvent()
+    const main = await startMain('api')
+    try {
+      expect(await within(CHILD_SILENCE_MS, published(aggregateId))).toBe(false)
+      // And it is a live server that declined the row, not a dead one.
+      const res = await fetch(`http://127.0.0.1:${String(main.port)}/health/live`)
+      expect(res.status).toBe(200)
+    } finally {
+      await main.stop()
+      await db.delete(outboxEvents).where(eq(outboxEvents.aggregateId, aggregateId))
+    }
+  })
+})
+
+/**
  * A TCP hop in front of the suite's Redis, so it can be taken away without
  * stopping a container every other file shares. Killing it refuses every
  * reconnect, which is what a Redis outage looks like to ioredis.
@@ -336,7 +549,21 @@ async function proxyToRedis(target: string): Promise<{ url: string; kill: () => 
 }
 
 describe('shutdown while Redis is away', () => {
+  // The other half of the line below: a warning that fired on every shutdown
+  // would make the assertion in the outage test vacuous, and it would cry
+  // wolf on every ordinary deploy.
+  it('says nothing when Redis drains normally', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const built = await bootWith('all')
+    app = undefined
+    // A command actually in flight, so there is something to drain.
+    await built.get<Redis>(REDIS).ping()
+    await built.close()
+    expect(warn).not.toHaveBeenCalled()
+  })
+
   it('ends the client and completes well inside the SIGTERM grace period', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
     const proxy = await proxyToRedis(validatedEnv().REDIS_URL)
     const built = await bootWith('all', { REDIS_URL: proxy.url })
     app = built
@@ -392,6 +619,18 @@ describe('shutdown while Redis is away', () => {
       const attemptsAtClose = reconnectAttempts
       expect(await within(QUIET_AFTER_CLOSE_MS, () => reconnectAttempts > attemptsAtClose)).toBe(
         false,
+      )
+
+      // And it said so. Dropping what could not be drained is the whole point
+      // of the bound, and this line is the only record that it happened —
+      // before the bound existed, Nest's own Promise.allSettled logged the
+      // rejected hook. The timeout branch is the one asserted because it is
+      // the one that can be relied on to arrive: the quit() it gave up on
+      // never settles afterwards.
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: expect.stringContaining('redis did not drain within') as string,
+        }),
       )
     } finally {
       await proxy.kill()

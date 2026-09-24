@@ -271,11 +271,12 @@ describe('GET /health with Redis unreachable', () => {
     lines.length = 0
   })
 
-  // It does resolve, and it is slow: 4548 / 4552 / 4543 ms over three runs.
-  // The delay is RedisCloser's quit() waiting out ioredis's retry budget, and
-  // because it resolves rather than rejects, the shutdown hooks after it still
-  // run. Against a SIGTERM grace period that delay matters and is recorded
-  // against Task 16 — but it is not this endpoint's, and it is not a hang.
+  // It resolves, and since Task 16 it is no longer slow: 1006 / 1005 / 1003 ms
+  // over three runs, all of it RedisCloser spending its REDIS_QUIT_TIMEOUT_MS
+  // before disconnecting the client. It used to read 4548 / 4552 / 4543 ms
+  // here — quit() waiting out ioredis's retry budget — and 10 201-10 519 ms
+  // whenever a command was still in flight, which is the case that mattered
+  // against a SIGTERM grace period. The delay is still not this endpoint's.
   afterAll(async () => {
     await app.close()
   })

@@ -6,11 +6,13 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import type { OpenAPIObject, ReferenceObject, SchemaObject } from '@nestjs/swagger'
 import { ThrottlerStorage } from '@nestjs/throttler'
 import type { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
+import type { Redis } from 'ioredis'
 import type { Pool } from 'pg'
 import { z } from 'zod'
 import { ERROR_CODES, persianText, ProblemDetailsSchema } from '@ds/contracts'
 import type * as ConfigBarrel from '../../src/infra/config/index.js'
 import type * as DbBarrel from '../../src/infra/db/index.js'
+import type * as RedisBarrel from '../../src/infra/redis/index.js'
 import { ApiZodResponse, buildDocument } from '../../src/shared/openapi/index.js'
 
 const WidgetSchema = z.object({ id: z.uuid(), label: z.string().max(10) })
@@ -120,6 +122,7 @@ describe('OpenAPI generation', () => {
     let doc: OpenAPIObject
     let config: typeof ConfigBarrel
     let dbBarrel: typeof DbBarrel
+    let redisBarrel: typeof RedisBarrel
 
     beforeAll(async () => {
       vi.stubEnv('DATABASE_URL', 'postgres://dubaisupp:dubaisupp@127.0.0.1:1/dubaisupp')
@@ -136,6 +139,7 @@ describe('OpenAPI generation', () => {
       // After resetModules the graph holds a freshly created PG_POOL symbol;
       // a static import here would be a different symbol and resolve nothing.
       dbBarrel = await import('../../src/infra/db/index.js')
+      redisBarrel = await import('../../src/infra/redis/index.js')
       moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
       app = moduleRef.createNestApplication<NestFastifyApplication>(
         new FastifyAdapter({ logger: false }),
@@ -164,11 +168,27 @@ describe('OpenAPI generation', () => {
     })
 
     it('opens no Redis connection', () => {
-      // The throttler's client is created with lazyConnect and no request was
-      // served, so ioredis has not even attempted to connect: `wait` is the
-      // status before the first command or an explicit connect().
+      // The client is created with lazyConnect and no request was served, so
+      // ioredis has not even attempted to connect: `wait` is the status
+      // before the first command or an explicit connect().
       const storage = moduleRef.get<ThrottlerStorageRedisService>(ThrottlerStorage)
       expect(storage.redis.status).toBe('wait')
+    })
+
+    // The whole point of the REDIS provider: the throttler storage used to
+    // construct a client of its own inside app.module.ts's factory, so the
+    // booted graph held two connections and closed neither. Identity is the
+    // assertion — two clients built from the same URL would be equal in every
+    // other respect and still be two sockets.
+    it('holds exactly one ioredis client, shared by the throttler and the port', () => {
+      const storage = moduleRef.get<ThrottlerStorageRedisService>(ThrottlerStorage)
+      const shared = moduleRef.get<Redis>(redisBarrel.REDIS)
+      expect(storage.redis).toBe(shared)
+      // And the port resolves to the adapter whose only constructor argument
+      // is that token, so it is over the same client rather than a third one.
+      expect(moduleRef.get(redisBarrel.KeyValueStore)).toBeInstanceOf(
+        redisBarrel.RedisKeyValueStore,
+      )
     })
 
     it('matches the committed openapi.json', async () => {

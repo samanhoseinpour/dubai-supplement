@@ -9,6 +9,7 @@
     "test/**/*.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
+    "vitest.storage.config.ts",
     "drizzle.config.ts",
     "eslint.config.js"
   ],

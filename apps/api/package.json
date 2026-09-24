@@ -10,10 +10,13 @@
     "openapi": "node dist/openapi.js",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:storage": "vitest run --config vitest.storage.config.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "catalog:",
+    "@aws-sdk/s3-request-presigner": "catalog:",
     "@ds/contracts": "workspace:*",
     "@fastify/cookie": "catalog:",
     "@fastify/helmet": "catalog:",

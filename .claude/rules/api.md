@@ -36,3 +36,12 @@ paths:
 - **Tests are Vitest with `app.inject()`.** No supertest, no Jest globals.
 - **ESM:** relative imports carry an explicit `.js`. `__dirname` and
   `__filename` are banned by lint — use `import.meta.url`.
+- **The Swagger UI's CSP is verified in a browser, never by `pnpm check`.**
+  `app.inject()` cannot see a browser-side CSP block, so the inject test only
+  pins that `@nestjs/swagger`'s template has no inline script or handler.
+  After any `swagger-ui-dist` or `@nestjs/swagger` bump, with the stack up and
+  `apps/api/.env` present, run from `apps/api`:
+  `pnpm --filter api build && node test/manual/csp/check.mjs`. It boots the
+  built app, loads `/docs` in headless Chrome over CDP, exercises "Try it out"
+  and fails on any refusal; `--control` forces `script-src 'none'` onto the
+  page and must report refusals, or the detector itself is broken.

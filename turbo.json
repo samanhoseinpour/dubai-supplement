@@ -41,7 +41,7 @@
       ]
     },
     "api#test:integration": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build"],
       "cache": false,
       "env": [
         "NODE_ENV",

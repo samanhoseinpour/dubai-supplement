@@ -9,6 +9,7 @@
     "start": "node dist/main.js",
     "openapi": "node dist/openapi.js",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -43,11 +44,13 @@
     "@nestjs/testing": "catalog:",
     "@swc/cli": "catalog:",
     "@swc/core": "catalog:",
+    "@testcontainers/postgresql": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "pino-pretty": "catalog:",
+    "testcontainers": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

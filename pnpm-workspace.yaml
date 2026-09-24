@@ -14,6 +14,13 @@ allowBuilds:
   sharp: true
   lefthook: true
   '@scarf/scarf': false
+  # Build scripts that surfaced when testcontainers brought in dockerode.
+  # None of the three is needed to talk to a local Docker socket, and each
+  # would make the install depend on a toolchain every machine and CI runner
+  # would then have to carry.
+  cpu-features: false
+  ssh2: false
+  protobufjs: false
 
 peerDependencyRules:
   allowedVersions:
@@ -78,6 +85,7 @@ catalog:
   vitest: 5.0.1
   '@vitest/coverage-v8': 5.0.1
   testcontainers: 12.1.0
+  '@testcontainers/postgresql': 12.1.0
   '@playwright/test': 1.63.0
   '@axe-core/playwright': 4.13.0
   openapi-typescript: 7.13.0

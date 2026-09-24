@@ -2238,9 +2238,17 @@ the validator badge entirely.
 **So do not relax CSP.** Relaxing it would weaken every route's headers to buy
 nothing. Step 6 is the gated `SwaggerModule.setup` call plus a test that `/docs`
 answers **200 under the real `registerSecurity` headers** when
-`OPENAPI_UI_ENABLED` is true and **404** when it is false. That test is the
-durable guard: if a future `swagger-ui-dist` introduces an inline script, CSP
-will start blocking it and the 200 assertion is what catches it.
+`OPENAPI_UI_ENABLED` is true and **404** when it is false. What that test pins,
+and all an `app.inject()` test can pin: the page is served under the same
+policy as every other route, and **`@nestjs/swagger`'s template** — which owns
+the HTML, not `swagger-ui-dist` — emits no inline `<script>` and no inline
+handler, so the default `script-src 'self'` holds. A `swagger-ui-dist` bump
+cannot put an inline script on that page; its realistic CSP risk is inside the
+bundle (`eval`, `new Function`, a Worker, a foreign fetch), which no
+`inject()` test can observe. That case needs a **browser**:
+`apps/api/test/manual/csp/check.mjs` loads `/docs` in headless Chrome over the
+DevTools Protocol and fails on any refusal (`.claude/rules/api.md` says when it
+must run). It is deliberately outside `pnpm check`.
 
 - [ ] **Step 7: Generate, commit the artefact, verify**
 

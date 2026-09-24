@@ -3812,12 +3812,12 @@ git commit -m "feat(api): select the process role at boot and stop the relay gra
 
 - Create: `apps/api/.dependency-cruiser.cjs`
 - Test: `apps/api/test/boundaries.test.ts` (unit — asserts the rules exist and the task runs)
-- Modify: `apps/api/package.json` (add `boundaries` script, `dependency-cruiser`), `.github/workflows/ci.yml`
+- Modify: `apps/api/package.json` (add `boundaries` script, `dependency-cruiser`), `.github/workflows/ci.yml`, and `packages/config-eslint/nest.js` (Step 4 — `eslint-plugin-boundaries` is a declared dependency no config has ever referenced)
 
 **Interfaces:**
 
-- Consumes: the directory layout from every earlier task.
-- Produces: the `boundaries` turbo task, already declared in `turbo.json`.
+- Consumes: the directory layout from every earlier task, including the entrypoints `main.ts`, `app.factory.ts`, `openapi.ts`, `migrate.ts` and Task 16's `worker.ts` — which stand or fall together under any rule that treats one of them specially.
+- Produces: the `boundaries` turbo task, already declared in `turbo.json` and a no-op until this task gives some package a `boundaries` script.
 
 - [ ] **Step 1: Write `.dependency-cruiser.cjs`**
 
@@ -3870,30 +3870,38 @@ module.exports = {
 }
 ```
 
-- [ ] **Step 2: Prove each rule actually fires**
+- [ ] **Step 2: Add the script FIRST, then prove each rule actually fires**
 
-A rule that never fires is decoration. Create a throwaway violation, confirm the failure, then delete it:
+**Corrected 2026-09-24. The original Step 2 could not run and its second check could not have worked.** Two defects:
 
-```bash
-mkdir -p apps/api/src/modules/demo/domain
-printf "import { Injectable } from '@nestjs/common'\nexport const x = Injectable\n" > apps/api/src/modules/demo/domain/bad.ts
-pnpm --filter api exec depcruise src --config .dependency-cruiser.cjs   # expect: domain-is-pure error
-rm -rf apps/api/src/modules/demo
-printf "import { Something } from '../modules/demo/index.js'\nexport const y = Something\n" > apps/api/src/shared/bad.ts
-pnpm --filter api exec depcruise src --config .dependency-cruiser.cjs   # expect: shared-and-infra-are-leaves error
-rm -f apps/api/src/shared/bad.ts
-```
+- It invoked `pnpm --filter api exec depcruise …`, and `Bash(pnpm exec *)` is **denied** in this environment (spec §19.9). Add the `boundaries` script before proving anything, and drive every check through `pnpm --filter api boundaries`.
+- It deleted `apps/api/src/modules/demo` **before** writing `src/shared/bad.ts`, whose whole purpose is to import `../modules/demo/index.js`. Against a target that no longer exists, what comes back is an unresolvable-module complaint, not `shared-and-infra-are-leaves`. A check that fails for the wrong reason is indistinguishable from a rule that works.
 
-Expected: each command exits non-zero naming the rule. If one passes, the rule's `from`/`to` globs do not match the real layout and must be fixed now, not when a real violation appears.
+So: add `"boundaries": "depcruise src --config .dependency-cruiser.cjs"` to `apps/api/package.json` and `dependency-cruiser` as a catalog devDependency, confirm `pnpm --filter api boundaries` exits **0** against today's tree, and only then start breaking it.
 
-- [ ] **Step 3: Add the script and run it clean**
+Required effect: **every rule in the config is observed to fail, by name, against a violation built for it, and the tree is clean again afterwards.** A rule that has never been seen to fire is decoration. Build each fixture so the _only_ thing wrong with it is the thing the rule forbids — if a fixture needs a module to import, create that module and delete it after, not before. Arranging the fixtures is yours; the deliverable is the rule name in real output for each rule, pasted into your report.
 
-`"boundaries": "depcruise src --config .dependency-cruiser.cjs"`, `dependency-cruiser` as a catalog devDependency.
+- [ ] **Step 3: Enforce the barrel convention — the one live rule nothing checks**
 
-Run: `pnpm --filter api boundaries`
-Expected: exit 0 — no violations in the code written so far.
+**Added 2026-09-24 by measurement.** Every `infra/<dir>` in `apps/api/src` is reached from outside that directory only through its `index.js`, and I checked the whole of `src`: there are **zero** deep imports. `outbox.relay.ts`, `logger.module.ts`, `db.module.ts`, `drizzle.provider.ts`, `http/problem.filter.ts` and `http/security.ts` all take `AppConfig`/`Env`/`Db` from `'../config/index.js'` or `'../db/index.js'`. Thirteen tasks have held that line by hand and nothing enforces it.
 
-- [ ] **Step 4: Add the CI build step (DoD 9)**
+It is also the rule most likely to be broken next, precisely because it is invisible: the Task 14 brief shipped `import { AppConfig } from '../config/app-config.js'` in its own sample code.
+
+Required effect: **an import that reaches past an `infra/<dir>/index.ts` from outside that directory fails `pnpm check`.** File-to-file imports _within_ one directory stay legal — that is the normal case, not an exception. Prove it fires and prove it does not fire on the legal case.
+
+Two notes on scope. First, `src/main.ts`, `src/app.factory.ts`, `src/openapi.ts`, `src/migrate.ts` and Task 16's `src/worker.ts` are entrypoints: whatever treatment one of them needs — an allowance, an orphan exemption, a `doNotFollow` — **all** of them need, or a rule will fire on one and not its twin. Task 8 split `app.factory.ts` out of `main.ts` precisely so the security wiring could be tested; do not let a boundaries rule punish that. Second, barrels hold re-exports only, and that is a convention this rule does not check — leave it to review.
+
+- [ ] **Step 4: Wire `eslint-plugin-boundaries` (spec §4.1, missing from this plan)**
+
+**Ruling, taken 2026-09-24.** Spec §4.1 line 120 lists enforcement as "…`dependency-cruiser` in `apps/api` (module boundaries, §5.3; task `boundaries`), **`eslint-plugin-boundaries` in both apps**, `sherif`… — all wired into `pnpm check`." `eslint-plugin-boundaries` is declared in `@ds/config-eslint`'s `dependencies` and **no config file references it** — not `base.js`, `nest.js`, `next.js` or `rtl.js`. It has been dead since Phase 1, and this plan never assigned it an owner. `apps/web` is Phase 3, so the `apps/api` half is this task's.
+
+**Ruled: wire it, and give it the rules dependency-cruiser is worst at rather than a copy of them.** The two tools do different jobs and the duplication would be the waste, not the plugin: ESLint reports per file, at author time, in the editor, which is where a wrong import is cheapest to fix; dependency-cruiser sees the whole graph, which is the only way to catch circularity. `boundaries/entry-point` is, by name and by design, the rule for "this directory may be entered only through its barrel" — so Step 3's rule belongs here, and dependency-cruiser keeps the graph-wide ones. Cost if wrong: one config block to delete, and the barrel rule moves back to `.dependency-cruiser.cjs`.
+
+A declared-but-unreferenced dependency is the worst of the three options available: it reads as enforcement to anyone auditing `package.json` and enforces nothing.
+
+Required effect: **`pnpm check` fails on a boundary violation that ESLint can see in a single file, and the element types describe the layout that exists** — `infra/*`, `shared/*`, and `modules/*` for the aggregates Phase 3 adds. Same bar as Step 2: each rule is observed to fire by name before you keep it.
+
+- [ ] **Step 5: Add the CI build step (DoD 9)**
 
 In `.github/workflows/ci.yml`, in the `check` job after `pnpm check:affected`:
 
@@ -3908,7 +3916,7 @@ In `.github/workflows/ci.yml`, in the `check` job after `pnpm check:affected`:
 
 `API_INTERNAL_URL` points at a closed port on purpose: §10.1 uses the build succeeding against an unreachable API as the DoD 9 acceptance. It has no effect until `apps/web` exists in Phase 3, and declaring it now means the job does not change shape then.
 
-- [ ] **Step 5: Verify and commit**
+- [ ] **Step 6: Verify and commit**
 
 ```bash
 pnpm check

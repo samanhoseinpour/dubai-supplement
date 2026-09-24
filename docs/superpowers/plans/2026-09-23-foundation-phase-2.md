@@ -3823,12 +3823,27 @@ if (process.env.PROCESS_ROLE === 'worker') {
 }
 ```
 
-- [ ] **Step 3: Verify and commit**
+- [ ] **Step 3: SIGTERM during a Redis outage must not hang the container**
+
+**Added 2026-09-24, from a defect Task 15 reported against Task 14's `RedisModule` and deliberately did not fix.** Verify it before you fix it — I have not reproduced it myself, and this plan has carried unverified mechanism claims before.
+
+The claim: `RedisCloser.onApplicationShutdown` calls `await this.redis.quit()`, and during a Redis outage that **never returns**, so `app.close()` never returns either. Note what the existing comment in `redis.module.ts` actually measured — `quit()` on a **lazyConnect client that never ran a command** (status `wait`), which resolves in under a millisecond. A client that was connected and is now `reconnecting` is a different state, and the comment does not cover it. The guard there is `if (this.redis.status === 'end') return`, which catches neither.
+
+This is Task 16's, not Task 15's, because it is the same deliverable as the relay properties above: what happens when the process is told to stop. A container that ignores `SIGTERM` is killed by the platform after its grace period, which turns every deploy during a Redis blip into a hard kill.
+
+Required effect: **`SIGTERM` shuts the process down within the platform's grace period whether or not Redis is answering**, and shutdown still drains what is genuinely in flight. Mechanism yours — a bounded wait, a status check that covers `reconnecting`, `disconnect()` as the fallback after `quit()` has had its chance; decide it and say why. Pin it with a test that hangs (or fails a deadline) against today's code.
+
+If it does **not** reproduce, say so plainly, leave the code alone, and record what you measured. A reported defect that turns out not to exist is a fine outcome; quietly changing code to satisfy a claim nobody verified is not.
+
+- [ ] **Step 4: Verify and commit**
+
+`curl` and `wget` are **denied** in this environment (spec §19.9), so the manual smoke check uses Node's global `fetch`:
 
 ```bash
 pnpm --filter api build && pnpm --filter api test:integration
 PROCESS_ROLE=all node apps/api/dist/main.js &
-sleep 3 && curl -fsS http://127.0.0.1:3001/health/ready | head -c 200 && kill %1
+node -e "setTimeout(async()=>{const r=await fetch('http://127.0.0.1:3001/health/ready');console.log(r.status,(await r.text()).slice(0,200))},3000)"
+kill %1
 pnpm check
 git add apps/api
 git commit -m "feat(api): select the process role at boot and stop the relay gracefully"

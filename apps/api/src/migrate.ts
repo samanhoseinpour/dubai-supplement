@@ -4,12 +4,13 @@ import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import pg from 'pg'
-// Two deep imports, both for the same reason: either barrel carries
+// Three deep imports, all for the same reason: either barrel carries
 // ConfigModule, whose forRoot validates the environment the moment it is
 // imported — before this file's own loadEnvFile and outside the try below.
 // That Nest machinery is what this script stays free of so tsx may run it
-// (§4.2).
+// (§4.2). All three targets are leaves that import nothing.
 import { EnvSchema } from './infra/config/env.schema.js'
+import { CONNECT_TIMEOUT_MS } from './infra/db/connect-timeout.js'
 import { MIGRATION_LOCK_KEY } from './infra/db/migration-lock.js'
 
 // Everything the operator could get wrong runs inside the try, so every
@@ -21,7 +22,18 @@ try {
   if (existsSync(envFile)) process.loadEnvFile(envFile)
 
   const env = EnvSchema.parse(process.env)
-  pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: 1 })
+  // Bounded like the application's pool. A database that accepts the socket
+  // and then says nothing — a blackholed route, a failover mid-flight — would
+  // otherwise leave `connect()` below with no bound at all, and a migrator
+  // that hangs instead of exiting non-zero hangs the whole deploy: Liara is
+  // waiting on the release command, not on a health check. Only the wait for
+  // the *connection* is bounded; the advisory lock below still waits as long
+  // as the other container needs, which is this file's entire purpose (§6.2).
+  pool = new pg.Pool({
+    connectionString: env.DATABASE_URL,
+    max: 1,
+    connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+  })
   // One checked-out client for the whole sequence. The lock is session-level,
   // and a pool hands each statement whichever client is free — between two of
   // them the client goes idle and pg reaps it after idleTimeoutMillis (10 s by

@@ -1,8 +1,10 @@
 import { execFile } from 'node:child_process'
+import { createServer, type Server, type Socket } from 'node:net'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { CONNECT_TIMEOUT_MS } from './infra/db/connect-timeout.js'
 
 const run = promisify(execFile)
 const apiRoot = fileURLToPath(new URL('../', import.meta.url))
@@ -42,6 +44,75 @@ describe('src/migrate.ts', () => {
     })
     expect((failure as { stderr: string }).stderr).toContain('ECONNREFUSED')
   }, 30_000)
+
+  /**
+   * The failure a closed port cannot produce, and the one that hangs a deploy.
+   *
+   * ECONNREFUSED above is instant; this server completes the TCP handshake and
+   * then never answers the startup packet, which is what a blackholed route or
+   * a failover caught mid-flight looks like to `pg`. Without
+   * `connectionTimeoutMillis` on the migrator's pool, `pool.connect()` has no
+   * bound whatsoever and the process never exits — Liara waits on the release
+   * command, not on a health check, so nothing times it out but a human.
+   *
+   * A local silent socket rather than an unroutable address on purpose: no
+   * routing table decides the outcome, so this reproduces on any machine.
+   */
+  describe('against a server that accepts the socket and never speaks', () => {
+    let server: Server
+    let port: number
+    const sockets: Socket[] = []
+
+    beforeAll(async () => {
+      server = createServer((socket) => {
+        // Held, never written to, never ended.
+        sockets.push(socket)
+      })
+      await new Promise<void>((resolve) => {
+        server.listen(0, '127.0.0.1', resolve)
+      })
+      const address = server.address()
+      if (address === null || typeof address === 'string') {
+        throw new Error('expected a TCP address from the silent server')
+      }
+      port = address.port
+    })
+
+    afterAll(async () => {
+      for (const socket of sockets) socket.destroy()
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) reject(error)
+          else resolve()
+        })
+      })
+    })
+
+    it('gives up and exits non-zero instead of hanging the deploy', async () => {
+      const started = Date.now()
+      const failure: unknown = await run(process.execPath, [tsxCli, 'src/migrate.ts'], {
+        cwd: apiRoot,
+        env: {
+          ...env,
+          DATABASE_URL: `postgres://dubaisupp:dubaisupp@127.0.0.1:${String(port)}/dubaisupp`,
+        },
+      }).then(
+        () => undefined,
+        (error: unknown) => error,
+      )
+      expect(failure).toMatchObject({
+        code: 1,
+        stderr: expect.stringContaining('[migrate] failed:') as string,
+      })
+      // pg's own words for the establish path, so this cannot pass on some
+      // other failure that happened to arrive first.
+      expect((failure as { stderr: string }).stderr).toContain(
+        'Connection terminated due to connection timeout',
+      )
+      // And the bound is the pool's, not this test's timeout.
+      expect(Date.now() - started).toBeLessThan(CONNECT_TIMEOUT_MS * 5)
+    }, 60_000)
+  })
 
   // The deploy log and the test above both grep for one line, so the
   // environment gate has to produce it too: parsed outside the try, an

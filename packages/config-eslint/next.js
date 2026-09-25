@@ -90,6 +90,21 @@ const RESTRICTED_CLASSES = [
   },
 ]
 
+// enforce-logical-properties also maps the block axis and dimensions to
+// logical utilities (mt- → mbs-, w- → inline-). The requirement is RTL
+// correctness (foundation §7.2), which is the inline axis: block-axis and
+// dimension utilities never mirror between LTR and RTL, and their logical
+// forms are unfamiliar to every Tailwind reader, so they are ignored; every
+// left/right class stays enforced.
+const NOT_INLINE_AXIS = [
+  String.raw`^(?:[^\s:]+:)*-?(?:m|p|scroll-m|scroll-p)(?:t|b|y)-`,
+  String.raw`^(?:[^\s:]+:)*-?(?:top|bottom|inset-y)-`,
+  String.raw`^(?:[^\s:]+:)*(?:min-|max-)?(?:w|h|size)-`,
+  String.raw`^(?:[^\s:]+:)*border-(?:t|b|y)(?:-|$)`,
+  String.raw`^(?:[^\s:]+:)*rounded-(?:t|b)(?:-|$)`,
+  String.raw`^(?:[^\s:]+:)*(?:divide|space)-y(?:-|$)`,
+]
+
 const tailwindLayer = {
   files: ['**/*.ts', '**/*.tsx'],
   plugins: { 'better-tailwindcss': betterTailwindcss },
@@ -99,7 +114,7 @@ const tailwindLayer = {
     'better-tailwindcss': { entryPoint: 'app/globals.css' },
   },
   rules: {
-    'better-tailwindcss/enforce-logical-properties': 'error',
+    'better-tailwindcss/enforce-logical-properties': ['error', { ignore: NOT_INLINE_AXIS }],
     'better-tailwindcss/no-unknown-classes': 'error',
     'better-tailwindcss/no-conflicting-classes': 'error',
     'better-tailwindcss/no-duplicate-classes': 'error',

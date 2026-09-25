@@ -90,9 +90,10 @@ describe('oklchToHex', () => {
   })
 })
 
-// §5.2 — the signal inks: hue per signal (red 28, green 150, amber 65),
-// lightness 0.50, chroma the largest hundredth that stays 0.01 inside sRGB,
-// capped at 0.18. Lapis (hue 255, chroma 0.15) is the same rule.
+// §5.2 — Lapis and the signal inks, one rule: hue per colour (red 28, green
+// 150, amber 65, blue 255); lightness 0.50; chroma: the largest hundredth
+// ≥ 0.01 below the linear-light sRGB gamut boundary (bisection), capped at
+// 0.18 — red 0.19 → 0.18, green 0.12, amber 0.10, Lapis 0.15.
 const RED = hexToRgb(oklchToHex(0.5, 0.18, 28))
 const GREEN = hexToRgb(oklchToHex(0.5, 0.12, 150))
 const AMBER = hexToRgb(oklchToHex(0.5, 0.1, 65))
@@ -173,8 +174,9 @@ const TEXT_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['link', 'card'],
 ]
 
-// Tokens that carry no text and pair with nothing: the two edges, the ring
-// and the link ink.
+// Tokens with no `-foreground` partner: the two edges and the ring carry no
+// text; the link ink is text on the page and the card, and those pairs are
+// in TEXT_PAIRS.
 const UNPAIRED = ['border', 'input', 'ring', 'link']
 
 describe('contrast (WCAG 1.4.3 and 1.4.11)', () => {
@@ -250,11 +252,15 @@ describe('there is one theme (ADR-0021)', () => {
     expect(css).not.toMatch(/prefers-color-scheme/)
   })
 
-  it('names next-themes nowhere under apps/web', () => {
+  it('names next-themes nowhere under apps/web, package.json included', () => {
     // This file names it in the assertion below, so it judges every file but
-    // itself.
+    // itself. package.json is the file a re-added dependency would return
+    // through, before anything imports it.
     const self = fileURLToPath(import.meta.url)
-    const files = ['app', 'components', 'lib', 'e2e', 'test'].flatMap(filesUnder)
+    const files = [
+      ...['app', 'components', 'lib', 'e2e', 'test'].flatMap(filesUnder),
+      join(root, 'package.json'),
+    ]
     expect(files.length).toBeGreaterThan(20)
     for (const file of files) {
       if (file === self) continue

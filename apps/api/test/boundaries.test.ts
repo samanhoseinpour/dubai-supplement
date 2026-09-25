@@ -103,6 +103,17 @@ describe('the boundaries task', () => {
   })
 })
 
+// The first ESLint call in each block below does the expensive part once: the
+// first `calculateConfigForFile` loads apps/api/eslint.config.js and every
+// plugin it imports, and the first `lintText` builds the type-aware program
+// `projectService` needs. Each is under two seconds on a developer machine and
+// past vitest's 5 s default on CI's 2-vCPU runner, where both have failed —
+// the config load took 7 s on a cold runner. The budget is deliberately far
+// above the cost rather than just over it — a timeout tuned to the observed
+// number turns a slow runner into a red build, and none of these assertions
+// has anything to say about speed.
+const LINT_TIMEOUT_MS = 60_000
+
 describe('eslint-plugin-boundaries', () => {
   // Resolved the way ESLint itself resolves it, so the assertions are about the
   // config the linter actually applies to apps/api and not about a file that
@@ -112,34 +123,42 @@ describe('eslint-plugin-boundaries', () => {
     return (await eslint.calculateConfigForFile(`${apiDir}${relativeFile}`)) as FlatConfigSnapshot
   }
 
-  it('classifies the layout that exists: infra/*, shared/* and modules/*', async () => {
-    const config = await configFor('src/infra/db/db.module.ts')
-    const elements = (config.settings?.['boundaries/elements'] ??
-      []) as readonly ElementDescriptor[]
-    const byType = new Map(elements.map((element) => [element.type, element.pattern]))
+  it(
+    'classifies the layout that exists: infra/*, shared/* and modules/*',
+    async () => {
+      const config = await configFor('src/infra/db/db.module.ts')
+      const elements = (config.settings?.['boundaries/elements'] ??
+        []) as readonly ElementDescriptor[]
+      const byType = new Map(elements.map((element) => [element.type, element.pattern]))
 
-    expect(byType.get('infra')).toBe('src/infra/*')
-    expect(byType.get('shared')).toBe('src/shared/*')
-    expect(byType.get('domain')).toBe('src/modules/*/domain')
-    expect(byType.get('application')).toBe('src/modules/*/application')
-    expect(byType.get('module-infrastructure')).toBe('src/modules/*/infrastructure')
-  })
+      expect(byType.get('infra')).toBe('src/infra/*')
+      expect(byType.get('shared')).toBe('src/shared/*')
+      expect(byType.get('domain')).toBe('src/modules/*/domain')
+      expect(byType.get('application')).toBe('src/modules/*/application')
+      expect(byType.get('module-infrastructure')).toBe('src/modules/*/infrastructure')
+    },
+    LINT_TIMEOUT_MS,
+  )
 
-  it('enforces its rules as errors, by name', async () => {
-    const config = await configFor('src/infra/db/db.module.ts')
-    const entry = config.rules?.['boundaries/dependencies'] ?? []
-    expect(entry[0]).toBe(2)
+  it(
+    'enforces its rules as errors, by name',
+    async () => {
+      const config = await configFor('src/infra/db/db.module.ts')
+      const entry = config.rules?.['boundaries/dependencies'] ?? []
+      expect(entry[0]).toBe(2)
 
-    const options = entry[1] as BoundariesOptions
-    expect(options.default).toBe('allow')
-    const names = (options.policies ?? []).map((policy) => policy.message?.split(':')[0])
-    expect(names).toEqual([
-      'infra-barrel',
-      'infra-barrel-migrate-allowance',
-      'shared-barrel',
-      'domain-has-no-sibling-layers',
-    ])
-  })
+      const options = entry[1] as BoundariesOptions
+      expect(options.default).toBe('allow')
+      const names = (options.policies ?? []).map((policy) => policy.message?.split(':')[0])
+      expect(names).toEqual([
+        'infra-barrel',
+        'infra-barrel-migrate-allowance',
+        'shared-barrel',
+        'domain-has-no-sibling-layers',
+      ])
+    },
+    LINT_TIMEOUT_MS,
+  )
 })
 
 /**
@@ -161,7 +180,6 @@ describe('eslint-plugin-boundaries', () => {
  * linting rather than by reading the config back.
  */
 describe('eslint-plugin-boundaries actually reports', () => {
-  const LINT_TIMEOUT_MS = 60_000
   const eslint = new ESLint({ cwd: apiDir })
 
   // Real paths with substituted content: the config ESLint resolves is the one
@@ -196,12 +214,7 @@ describe('eslint-plugin-boundaries actually reports', () => {
       expect(messages).toHaveLength(1)
       expect(messages[0]).toMatch(/^infra-barrel:/)
     },
-    // The first lintText builds the type-aware program `projectService` needs,
-    // which dominates this block: ~2 s on a developer machine and past
-    // vitest's 5 s default on CI's 2-vCPU runner, where it failed. The budget
-    // is deliberately far above the cost rather than just over it — a timeout
-    // tuned to the observed number turns a slow runner into a red build, and
-    // this assertion has nothing to say about speed.
+    // The first lintText builds the type-aware program — see LINT_TIMEOUT_MS.
     LINT_TIMEOUT_MS,
   )
 

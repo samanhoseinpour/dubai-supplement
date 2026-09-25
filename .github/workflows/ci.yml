@@ -90,6 +90,54 @@ jobs:
           # means the job does not change shape then.
           API_INTERNAL_URL: http://127.0.0.1:9
 
+  e2e:
+    if: github.event_name != 'schedule'
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `next build` and `next start` read apps/web/.env from disk; the
+      # example holds the local values and no secret.
+      - run: cp apps/web/.env.example apps/web/.env
+      # Chromium is cached on the Playwright pin. The catalog file is the only
+      # place that pin lives, so its hash is the key; system libraries are not
+      # cached and are installed on every run.
+      - name: Cache Chromium
+        id: chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-workspace.yaml') }}
+      - if: steps.chromium.outputs.cache-hit != 'true'
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - if: steps.chromium.outputs.cache-hit == 'true'
+        run: pnpm --filter web exec playwright install-deps chromium
+      # The same two inputs as the DoD 9 build in `check`; `pnpm e2e` then
+      # replays the build from turbo's cache and starts the server.
+      - run: pnpm turbo run build --filter=web --output-logs=errors-only
+        env:
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          API_INTERNAL_URL: http://127.0.0.1:9
+      - run: pnpm e2e
+        env:
+          CI: 'true'
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          API_INTERNAL_URL: http://127.0.0.1:9
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+
   authors:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest

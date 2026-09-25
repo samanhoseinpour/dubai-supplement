@@ -137,17 +137,25 @@ describe('the catalog routes', () => {
       expect(problem.errors?.[0]?.path).toBe('slug')
     })
 
-    // Fastify's router refuses a parameter longer than its default 100
-    // characters with a bare 414 before Nest runs; app.factory.ts raises the
-    // cap so the contract's .max(64) answers instead, as the same 400 problem.
-    it('answers 400 naming slug, not a bare 414, for a slug over 100 characters', async () => {
-      const res = await app.inject({ method: 'GET', url: `/catalog/brands/${'a'.repeat(101)}` })
-      expect(res.statusCode).toBe(400)
-      expect(res.headers['content-type']).toContain('application/problem+json')
-      const problem = ProblemDetailsSchema.parse(res.json())
-      expect(problem.code).toBe('VALIDATION_FAILED')
-      expect(problem.errors?.[0]?.path).toBe('slug')
-    })
+    // Fastify's router refuses a parameter longer than its maxParamLength
+    // with a bare 414 before Nest runs. 101 is past the router's default of
+    // 100; 10,000 is past a fixed 8192 yet well inside the 16 KiB request
+    // line Node accepts. app.factory.ts ties the cap to Node's header limit,
+    // so the contract's .max(64) answers both, as the same 400 problem.
+    it.each([101, 10_000])(
+      'answers 400 naming slug, not a bare 414, for a slug of %i characters',
+      async (length) => {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/catalog/brands/${'a'.repeat(length)}`,
+        })
+        expect(res.statusCode).toBe(400)
+        expect(res.headers['content-type']).toContain('application/problem+json')
+        const problem = ProblemDetailsSchema.parse(res.json())
+        expect(problem.code).toBe('VALIDATION_FAILED')
+        expect(problem.errors?.[0]?.path).toBe('slug')
+      },
+    )
   })
 
   describe('the OpenAPI document', () => {

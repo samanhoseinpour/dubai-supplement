@@ -1,3 +1,4 @@
+import { maxHeaderSize } from 'node:http'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { ProblemDetailsSchema } from '@ds/contracts'
@@ -113,7 +114,7 @@ describe('createApp', () => {
         routerOptions: { maxParamLength: MAX_PARAM_LENGTH },
       })
       expect(BODY_LIMIT_BYTES).toBe(1_048_576)
-      expect(MAX_PARAM_LENGTH).toBe(8192)
+      expect(MAX_PARAM_LENGTH).toBe(maxHeaderSize)
     })
 
     it('keeps the raw body, and refuses one over the limit as a problem', async () => {

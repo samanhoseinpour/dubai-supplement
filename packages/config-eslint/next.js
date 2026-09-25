@@ -130,10 +130,17 @@ const RESTRICTED_CLASSES = [
     message: 'z-index: only z-header, z-overlay, z-sheet and z-toast exist (spec §5.4).',
   },
   {
-    // Tailwind's built-in `dark` variant is `prefers-color-scheme: dark`, so
-    // deleting the custom variant alone leaves `dark:` a known class.
-    pattern: `${VARIANTS}dark:`,
+    // Tailwind's built-in `dark` and `not-dark` variants are
+    // `prefers-color-scheme` queries, so deleting the custom variant alone
+    // leaves both known classes.
+    pattern: `${VARIANTS}(?:not-)?dark:`,
     message: 'dark-variant: there is one light theme; no `dark:` variant exists (ADR-0021).',
+  },
+  {
+    // The same query spelled out as an arbitrary at-rule variant.
+    pattern: 'prefers-color-scheme',
+    message:
+      'dark-variant: no class may answer prefers-color-scheme; there is one light theme (ADR-0021).',
   },
   {
     // A value that is, or opens with, a number carrying a length unit:

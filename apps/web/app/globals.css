@@ -92,12 +92,12 @@
   }
 }
 
-/* ---------- 2. Semantic tokens under shadcn's names (§5.2–§5.3) ---------- */
-/* Text-carrying tokens are solid hex. Alpha appears only on --border and
+/* ---------- 2. Semantic tokens under shadcn's names (§5.2) ---------- */
+/* One theme (ADR-0021): the tokens live on :root and nothing overrides them.
+   Text-carrying tokens are solid hex. Alpha appears only on --border and
    --input. Percentages are "ink mixed over surface" in sRGB. */
 
-:root,
-[data-theme='light'] {
+:root {
   color-scheme: light;
   --background: #fafafc;
   --foreground: #080813;
@@ -120,29 +120,6 @@
   --ring: #080813;
 }
 
-[data-theme='dark'] {
-  color-scheme: dark;
-  --background: #080813;
-  --foreground: #a0bddb;
-  --card: #11131f;
-  --card-foreground: #a0bddb;
-  --popover: #11131f;
-  --popover-foreground: #a0bddb;
-  --primary: #a0bddb;
-  --primary-foreground: #080813;
-  --secondary: #1a1e2b;
-  --secondary-foreground: #a0bddb;
-  --muted: #141623;
-  --muted-foreground: #72879f;
-  --accent: #232937;
-  --accent-foreground: #a0bddb;
-  --destructive: #f28b82;
-  --destructive-foreground: #080813;
-  --border: color-mix(in srgb, var(--color-frozen) 16%, transparent);
-  --input: color-mix(in srgb, var(--color-frozen) 52%, transparent);
-  --ring: #a0bddb;
-}
-
 /* Non-colour tokens that are not Tailwind namespaces (§5.4, §7.2). */
 :root {
   --duration-press: 100ms;
@@ -159,14 +136,9 @@
 /* §7.4 — a user who asked for more contrast gets solid boundaries and a
    thicker ring. */
 @media (prefers-contrast: more) {
-  :root,
-  [data-theme='light'] {
+  :root {
     --border: var(--color-iris);
     --input: var(--color-iris);
-  }
-  [data-theme='dark'] {
-    --border: var(--color-frozen);
-    --input: var(--color-frozen);
   }
   :focus-visible {
     outline-width: 3px;
@@ -197,18 +169,14 @@
   --color-ring: var(--ring);
 }
 
-/* `dark:` follows the attribute next-themes sets, never the OS alone (§5.6);
-   the nested selector is what lets a gallery panel force a theme. */
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
-
 /* ---------- 4. Base ---------- */
 
-/* Hand-written rules read the raw per-theme tokens (`--border`, never
+/* Hand-written rules read the raw tokens (`--border`, never
    `--color-border`). An alias from `@theme inline` is an unregistered custom
    property, so its `var()` resolves once, on the element that declares it —
-   `:root` — and a forced `[data-theme]` panel (the gallery) would inherit the
-   page theme through it. Utilities are unaffected: `@theme inline` compiles
-   them to the raw variable. */
+   `:root` — and any later override of the raw token would not reach it.
+   Utilities are unaffected: `@theme inline` compiles them to the raw
+   variable. */
 @layer base {
   * {
     border-color: var(--border);
@@ -247,13 +215,6 @@
   ::selection {
     background-color: var(--primary);
     color: var(--primary-foreground);
-  }
-
-  /* §5.6 — the theme switch is one whole-page cross-fade. */
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation-duration: var(--duration-fade);
-    animation-timing-function: var(--ease-out);
   }
 }
 

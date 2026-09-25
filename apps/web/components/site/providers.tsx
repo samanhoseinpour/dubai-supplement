@@ -1,25 +1,10 @@
-'use client'
-
 import { DirectionProvider } from '@base-ui/react/direction-provider'
-import { ThemeProvider } from 'next-themes'
 import type { ReactNode } from 'react'
 
-// Spec §5.6. The pre-paint script next-themes injects sets `data-theme`
-// before React hydrates, which keeps the shell static (no cookies in a
-// layout) and the first paint in the right theme. `disableTransitionOnChange`
-// stops every element cross-fading on its own — the View Transition does it
-// for the whole page at once. Light is what renders when nothing is stored.
+// Every provider the shell needs, in one place. Base UI's DirectionProvider
+// carries its own `'use client'`, so this file stays a Server Component and
+// the shell static (ADR-0006). There is one theme (ADR-0021): nothing here
+// reads a preference or sets an attribute before paint.
 export function Providers({ children }: { children: ReactNode }) {
-  return (
-    <ThemeProvider
-      attribute="data-theme"
-      defaultTheme="light"
-      enableSystem
-      enableColorScheme
-      disableTransitionOnChange
-      storageKey="ds-theme"
-    >
-      <DirectionProvider direction="rtl">{children}</DirectionProvider>
-    </ThemeProvider>
-  )
+  return <DirectionProvider direction="rtl">{children}</DirectionProvider>
 }

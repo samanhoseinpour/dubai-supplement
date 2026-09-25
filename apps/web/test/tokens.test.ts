@@ -1,10 +1,12 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { contrast, hexToRgb, mix, oklchToHex, toHex, type Rgb } from './helpers/color'
 
-const css = readFileSync(fileURLToPath(new URL('../app/globals.css', import.meta.url)), 'utf8')
+const root = fileURLToPath(new URL('../', import.meta.url))
+const css = readFileSync(join(root, 'app/globals.css'), 'utf8')
 
 function block(pattern: RegExp): Record<string, string> {
   const body = pattern.exec(css)?.[1]
@@ -16,19 +18,18 @@ function block(pattern: RegExp): Record<string, string> {
   return tokens
 }
 
-// The first @theme block closes at the first `}` that starts a line.
+// The first @theme block closes at the first `}` that starts a line. The
+// semantic tokens are the first `:root` block: one theme, no attribute
+// (ADR-0021).
 const primitives = block(/@theme\s*\{([\s\S]*?)\n\}/)
-const light = block(/:root,\s*\[data-theme=['"]light['"]\]\s*\{([^}]*)\}/)
-const dark = block(/\[data-theme=['"]dark['"]\]\s*\{([^}]*)\}/)
+const tokens = block(/:root\s*\{([^}]*)\}/)
 
 const IRIS = hexToRgb(primitives['color-iris'] ?? '')
 const FROZEN = hexToRgb(primitives['color-frozen'] ?? '')
 const PAPER = hexToRgb('#fafafc')
 const WHITE = hexToRgb('#ffffff')
 
-type Tokens = Record<string, string>
-
-function solid(tokens: Tokens, name: string): Rgb {
+function solid(name: string): Rgb {
   const value = tokens[name]
   if (value === undefined || !/^#[0-9a-f]{6}$/i.test(value)) {
     throw new Error(
@@ -38,7 +39,7 @@ function solid(tokens: Tokens, name: string): Rgb {
   return hexToRgb(value)
 }
 
-function alpha(tokens: Tokens, name: string): { alpha: number; over: (bg: Rgb) => Rgb } {
+function alpha(name: string): { alpha: number; over: (bg: Rgb) => Rgb } {
   const match = /^color-mix\(in srgb, var\(--color-(iris|frozen)\) (\d+)%, transparent\)$/.exec(
     tokens[name] ?? '',
   )
@@ -49,6 +50,13 @@ function alpha(tokens: Tokens, name: string): { alpha: number; over: (bg: Rgb) =
   const ink = match[1] === 'iris' ? IRIS : FROZEN
   const fraction = Number(match[2]) / 100
   return { alpha: fraction, over: (bg) => mix(ink, bg, fraction) }
+}
+
+/** Every file under `dir`, for the assertions that read the source tree. */
+function filesUnder(dir: string): string[] {
+  return readdirSync(join(root, dir), { recursive: true, encoding: 'utf8' })
+    .map((file) => join(root, dir, file))
+    .filter((file) => statSync(file).isFile())
 }
 
 describe('primitives', () => {
@@ -82,7 +90,7 @@ describe('oklchToHex', () => {
   })
 })
 
-describe('light tokens are derived, not typed (§5.2)', () => {
+describe('the tokens are derived, not typed (§5.2)', () => {
   it.each<[string, Rgb]>([
     ['background', PAPER],
     ['foreground', IRIS],
@@ -102,45 +110,13 @@ describe('light tokens are derived, not typed (§5.2)', () => {
     ['destructive-foreground', WHITE],
     ['ring', IRIS],
   ])('--%s', (name, expected) => {
-    expect(toHex(solid(light, name))).toBe(toHex(expected))
+    expect(toHex(solid(name))).toBe(toHex(expected))
   })
 
   it('carries alpha only on the two non-text tokens, at 12% and 48%', () => {
-    expect(alpha(light, 'border').alpha).toBe(0.12)
-    expect(alpha(light, 'input').alpha).toBe(0.48)
-    for (const [name, value] of Object.entries(light)) {
-      if (value.startsWith('color-mix')) expect(['border', 'input']).toContain(name)
-    }
-  })
-})
-
-describe('dark tokens are derived, not typed (§5.3)', () => {
-  it.each<[string, Rgb]>([
-    ['background', IRIS],
-    ['foreground', FROZEN],
-    ['card', mix(FROZEN, IRIS, 0.06)],
-    ['card-foreground', FROZEN],
-    ['popover', mix(FROZEN, IRIS, 0.06)],
-    ['popover-foreground', FROZEN],
-    ['primary', FROZEN],
-    ['primary-foreground', IRIS],
-    ['secondary', mix(FROZEN, IRIS, 0.12)],
-    ['secondary-foreground', FROZEN],
-    ['muted', mix(FROZEN, IRIS, 0.08)],
-    ['muted-foreground', mix(FROZEN, IRIS, 0.7)],
-    ['accent', mix(FROZEN, IRIS, 0.18)],
-    ['accent-foreground', FROZEN],
-    ['destructive', hexToRgb('#f28b82')],
-    ['destructive-foreground', IRIS],
-    ['ring', FROZEN],
-  ])('--%s', (name, expected) => {
-    expect(toHex(solid(dark, name))).toBe(toHex(expected))
-  })
-
-  it('carries alpha only on the two non-text tokens, at 16% and 52%', () => {
-    expect(alpha(dark, 'border').alpha).toBe(0.16)
-    expect(alpha(dark, 'input').alpha).toBe(0.52)
-    for (const [name, value] of Object.entries(dark)) {
+    expect(alpha('border').alpha).toBe(0.12)
+    expect(alpha('input').alpha).toBe(0.48)
+    for (const [name, value] of Object.entries(tokens)) {
       if (value.startsWith('color-mix')) expect(['border', 'input']).toContain(name)
     }
   })
@@ -161,21 +137,18 @@ const TEXT_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['destructive', 'card'],
 ]
 
-describe.each<[string, Tokens]>([
-  ['light', light],
-  ['dark', dark],
-])('%s contrast (WCAG 1.4.3 and 1.4.11)', (_theme, tokens) => {
+describe('contrast (WCAG 1.4.3 and 1.4.11)', () => {
   it.each(TEXT_PAIRS)('text %s on %s is at least 4.5:1', (fg, bg) => {
-    expect(contrast(solid(tokens, fg), solid(tokens, bg))).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(solid(fg), solid(bg))).toBeGreaterThanOrEqual(4.5)
   })
 
   it.each(['background', 'card'])('the control boundary over %s is at least 3:1', (bg) => {
-    const surface = solid(tokens, bg)
-    expect(contrast(alpha(tokens, 'input').over(surface), surface)).toBeGreaterThanOrEqual(3)
+    const surface = solid(bg)
+    expect(contrast(alpha('input').over(surface), surface)).toBeGreaterThanOrEqual(3)
   })
 
   it('the focus ring over the page is at least 3:1', () => {
-    expect(contrast(solid(tokens, 'ring'), solid(tokens, 'background'))).toBeGreaterThanOrEqual(3)
+    expect(contrast(solid('ring'), solid('background'))).toBeGreaterThanOrEqual(3)
   })
 
   it('every surface token has its text partner', () => {
@@ -187,9 +160,26 @@ describe.each<[string, Tokens]>([
   })
 })
 
-describe('the fill that does not invert (§5.3)', () => {
-  it('keeps primary and its label byte-identical across themes', () => {
-    expect(light['primary']).toBe(dark['primary'])
-    expect(light['primary-foreground']).toBe(dark['primary-foreground'])
+describe('there is one theme (ADR-0021)', () => {
+  it('keeps the tokens on :root, in the light colour scheme', () => {
+    expect(css).toMatch(/:root\s*\{\s*color-scheme: light;/)
+  })
+
+  it('has no theme attribute, no dark variant and no colour-scheme query', () => {
+    expect(css).not.toMatch(/data-theme/)
+    expect(css).not.toMatch(/@custom-variant dark/)
+    expect(css).not.toMatch(/prefers-color-scheme/)
+  })
+
+  it('names next-themes nowhere under apps/web', () => {
+    // This file names it in the assertion below, so it judges every file but
+    // itself.
+    const self = fileURLToPath(import.meta.url)
+    const files = ['app', 'components', 'lib', 'e2e', 'test'].flatMap(filesUnder)
+    expect(files.length).toBeGreaterThan(20)
+    for (const file of files) {
+      if (file === self) continue
+      expect(readFileSync(file, 'utf8'), file).not.toMatch(/next-themes/)
+    }
   })
 })

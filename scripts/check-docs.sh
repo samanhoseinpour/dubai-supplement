@@ -59,7 +59,7 @@ assert_contains .gitleaks.toml "useDefault = true"
 assert_contains pnpm-workspace.yaml "catalogMode: strict" "minimumReleaseAge"
 assert_contains package.json '"packageManager"' '"check:docs"' '"audit:authors"'
 assert_contains commitlint.config.mjs "config-conventional" "scope-enum"
-assert_contains apps/web/app/globals.css '--color-*: initial' '@custom-variant dark'
+assert_contains apps/web/app/globals.css '--color-*: initial' '@theme inline'
 assert_contains apps/web/next.config.ts 'cacheComponents: true' 'reactCompiler: true' "output: 'standalone'"
 assert_contains packages/config-eslint/next.js 'enforce-logical-properties' 'no-unknown-classes' 'boundaries/dependencies'
 assert_contains prettier.config.mjs 'prettier-plugin-tailwindcss'

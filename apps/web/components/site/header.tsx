@@ -1,12 +1,13 @@
 import { buttonVariants } from '@/components/ui/button'
 import { Link } from '@/components/ui/link'
 import { copy } from '@/lib/copy'
-import { ThemeToggle } from './theme-toggle'
 import { Wordmark } from './wordmark'
 
-// Spec §8.1: the material, sticky; wordmark at the start, one link, the
-// toggle at the end. «برندها» targets a route 3c creates; until then it is
-// the not-found page, and nothing is deployed before Phase 4.
+// Spec §8.1: the material, sticky; wordmark at the start, one link at the
+// end. «برندها» targets a route 3c creates; until then it is the not-found
+// page, and nothing is deployed before Phase 4. The end slot is otherwise
+// empty on purpose: the theme toggle left with ADR-0021, and 3c puts the
+// cart there.
 export function Header() {
   return (
     <header className="sticky top-0 z-header material">
@@ -21,7 +22,6 @@ export function Header() {
           >
             {copy.nav.brands}
           </Link>
-          <ThemeToggle />
         </nav>
       </div>
     </header>

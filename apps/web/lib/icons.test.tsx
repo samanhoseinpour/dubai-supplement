@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { describe, expect, it } from 'vitest'
+import * as icons from './icons'
 import { ICON_SIZE, IconBack, IconForward, IconSpinner } from './icons'
 
 function pathOf(element: ReactElement): string | null {
@@ -21,5 +22,11 @@ describe('lib/icons', () => {
     const { container } = render(<IconSpinner size={ICON_SIZE.lg} />)
     expect(container.querySelector('svg')).toHaveAttribute('width', '24')
     expect(ICON_SIZE).toEqual({ sm: 16, md: 20, lg: 24 })
+  })
+
+  it('has no theme icons — there is one theme (ADR-0021)', () => {
+    for (const name of ['IconSun', 'IconMoon', 'IconSystem']) {
+      expect(icons, name).not.toHaveProperty(name)
+    }
   })
 })

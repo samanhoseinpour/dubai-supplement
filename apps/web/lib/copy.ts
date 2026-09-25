@@ -19,12 +19,6 @@ export const copy = {
     lead: 'پروتئین، کراتین و ویتامین‌ها از برندهای معتبر، با ضمانت اصالت و ارسال سریع.',
     cta: 'مشاهدهٔ برندها',
   },
-  theme: {
-    label: 'انتخاب طرح',
-    light: 'روشن',
-    dark: 'تاریک',
-    system: 'سیستم',
-  },
   footer: {
     rights: 'همهٔ حقوق محفوظ است',
   },
@@ -46,8 +40,7 @@ export const copy = {
   },
   design: {
     title: 'سیستم طراحی',
-    intro: 'هر جزء در هر حالت، در طرح روشن و تاریک. جزئی که اینجا نیست، وجود ندارد.',
-    panels: { light: 'طرح روشن', dark: 'طرح تاریک' },
+    intro: 'هر جزء در هر حالت. جزئی که اینجا نیست، وجود ندارد.',
     sections: {
       colors: 'رنگ‌ها',
       typography: 'تایپوگرافی',
@@ -59,7 +52,6 @@ export const copy = {
       skeletons: 'اسکلت‌ها',
       price: 'قیمت',
       emptyState: 'حالت خالی',
-      themeToggle: 'تغییر طرح',
     },
     states: {
       default: 'عادی',

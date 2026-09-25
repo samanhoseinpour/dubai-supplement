@@ -7,7 +7,7 @@ afterEach(() => {
   cleanup()
 })
 
-// jsdom has neither. next-themes reads matchMedia for `enableSystem`; Base UI's
+// jsdom has neither. Base UI reads matchMedia for its media queries, and its
 // positioning observes element sizes. Both stubs are inert, and both are
 // installed only when missing so a future jsdom that ships them wins. Missing
 // is judged by value, not by key: Vitest's jsdom environment defines every

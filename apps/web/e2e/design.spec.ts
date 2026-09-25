@@ -52,9 +52,15 @@ test.describe('/design (spec §10.2)', () => {
 
   test('the tokens reach the DOM', async ({ page }) => {
     await page.goto('/design')
+    // The primary is the ink (ADR-0020): Iris under a paper label.
     await expect(page.locator('[data-variant="primary"]').first()).toHaveCSS(
       'background-color',
-      'rgb(160, 189, 219)',
+      'rgb(8, 8, 19)',
+    )
+    // Lapis reaches the DOM as the secondary's 12 % tint (§5.2).
+    await expect(page.locator('[data-variant="secondary"]').first()).toHaveCSS(
+      'background-color',
+      'rgb(223, 232, 244)',
     )
     // The hand-written rules read the raw tokens — `.skeleton` reads `--muted`
     // and `* { border-color: var(--border) }` — which jsdom cannot see.

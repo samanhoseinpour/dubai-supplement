@@ -25,7 +25,7 @@ const primitives = block(/@theme\s*\{([\s\S]*?)\n\}/)
 const tokens = block(/:root\s*\{([^}]*)\}/)
 
 const IRIS = hexToRgb(primitives['color-iris'] ?? '')
-const FROZEN = hexToRgb(primitives['color-frozen'] ?? '')
+const LAPIS = hexToRgb(primitives['color-lapis'] ?? '')
 const PAPER = hexToRgb('#fafafc')
 const WHITE = hexToRgb('#ffffff')
 
@@ -40,14 +40,12 @@ function solid(name: string): Rgb {
 }
 
 function alpha(name: string): { alpha: number; over: (bg: Rgb) => Rgb } {
-  const match = /^color-mix\(in srgb, var\(--color-(iris|frozen)\) (\d+)%, transparent\)$/.exec(
+  const match = /^color-mix\(in srgb, var\(--color-(iris|lapis)\) (\d+)%, transparent\)$/.exec(
     tokens[name] ?? '',
   )
   if (!match)
-    throw new Error(
-      `--${name} must be color-mix(in srgb, var(--color-iris|frozen) N%, transparent)`,
-    )
-  const ink = match[1] === 'iris' ? IRIS : FROZEN
+    throw new Error(`--${name} must be color-mix(in srgb, var(--color-iris|lapis) N%, transparent)`)
+  const ink = match[1] === 'iris' ? IRIS : LAPIS
   const fraction = Number(match[2]) / 100
   return { alpha: fraction, over: (bg) => mix(ink, bg, fraction) }
 }
@@ -60,9 +58,11 @@ function filesUnder(dir: string): string[] {
 }
 
 describe('primitives', () => {
-  it('are Black Iris and Frozen (D9)', () => {
+  it('are Black Iris and Lapis (D9, ADR-0020)', () => {
     expect(toHex(IRIS)).toBe('#080813')
-    expect(toHex(FROZEN)).toBe('#a0bddb')
+    // Lapis follows the signal inks' rule: L 0.50, hue 255, chroma 0.15.
+    expect(toHex(LAPIS)).toBe(oklchToHex(0.5, 0.15, 255))
+    expect(primitives['color-frozen']).toBeUndefined()
   })
 
   it('delete every default scale a third colour or size could hide in (§5.1)', () => {
@@ -71,7 +71,7 @@ describe('primitives', () => {
     }
   })
 
-  it('never use oklch (the shadcn theme was replaced)', () => {
+  it('never use oklch (the CSS stays hex; only this test computes it)', () => {
     expect(css).not.toMatch(/oklch\(/)
   })
 })
@@ -90,6 +90,16 @@ describe('oklchToHex', () => {
   })
 })
 
+// §5.2 — the signal inks: hue per signal (red 28, green 150, amber 65),
+// lightness 0.50, chroma the largest hundredth that stays 0.01 inside sRGB,
+// capped at 0.18. Lapis (hue 255, chroma 0.15) is the same rule.
+const RED = hexToRgb(oklchToHex(0.5, 0.18, 28))
+const GREEN = hexToRgb(oklchToHex(0.5, 0.12, 150))
+const AMBER = hexToRgb(oklchToHex(0.5, 0.1, 65))
+
+/** A `-soft` surface: the ink pre-mixed at 12 % over the card. */
+const soft = (ink: Rgb): Rgb => mix(ink, WHITE, 0.12)
+
 describe('the tokens are derived, not typed (§5.2)', () => {
   it.each<[string, Rgb]>([
     ['background', PAPER],
@@ -98,17 +108,27 @@ describe('the tokens are derived, not typed (§5.2)', () => {
     ['card-foreground', IRIS],
     ['popover', WHITE],
     ['popover-foreground', IRIS],
-    ['primary', FROZEN],
-    ['primary-foreground', IRIS],
-    ['secondary', mix(IRIS, PAPER, 0.06)],
-    ['secondary-foreground', IRIS],
+    ['primary', IRIS],
+    ['primary-foreground', PAPER],
+    ['secondary', mix(LAPIS, PAPER, 0.12)],
+    ['secondary-foreground', LAPIS],
     ['muted', mix(IRIS, PAPER, 0.04)],
     ['muted-foreground', mix(IRIS, PAPER, 0.62)],
-    ['accent', mix(FROZEN, PAPER, 0.24)],
-    ['accent-foreground', IRIS],
-    ['destructive', hexToRgb('#b3261e')],
-    ['destructive-foreground', WHITE],
-    ['ring', IRIS],
+    ['accent', mix(LAPIS, PAPER, 0.16)],
+    ['accent-foreground', LAPIS],
+    ['destructive', RED],
+    ['destructive-foreground', PAPER],
+    ['destructive-soft', soft(RED)],
+    ['sale', RED],
+    ['sale-foreground', PAPER],
+    ['success', GREEN],
+    ['success-foreground', PAPER],
+    ['success-soft', soft(GREEN)],
+    ['warning', AMBER],
+    ['warning-foreground', PAPER],
+    ['warning-soft', soft(AMBER)],
+    ['link', LAPIS],
+    ['ring', LAPIS],
   ])('--%s', (name, expected) => {
     expect(toHex(solid(name))).toBe(toHex(expected))
   })
@@ -132,10 +152,30 @@ const TEXT_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['muted-foreground', 'muted'],
   ['muted-foreground', 'card'],
   ['accent-foreground', 'accent'],
+  // `::selection` is the foreground on the accent tint (§5.2).
+  ['foreground', 'accent'],
   ['destructive-foreground', 'destructive'],
   ['destructive', 'background'],
   ['destructive', 'card'],
+  ['destructive', 'destructive-soft'],
+  ['sale-foreground', 'sale'],
+  ['sale', 'background'],
+  ['sale', 'card'],
+  ['success-foreground', 'success'],
+  ['success', 'background'],
+  ['success', 'card'],
+  ['success', 'success-soft'],
+  ['warning-foreground', 'warning'],
+  ['warning', 'background'],
+  ['warning', 'card'],
+  ['warning', 'warning-soft'],
+  ['link', 'background'],
+  ['link', 'card'],
 ]
+
+// Tokens that carry no text and pair with nothing: the two edges, the ring
+// and the link ink.
+const UNPAIRED = ['border', 'input', 'ring', 'link']
 
 describe('contrast (WCAG 1.4.3 and 1.4.11)', () => {
   it.each(TEXT_PAIRS)('text %s on %s is at least 4.5:1', (fg, bg) => {
@@ -153,10 +193,49 @@ describe('contrast (WCAG 1.4.3 and 1.4.11)', () => {
 
   it('every surface token has its text partner', () => {
     for (const name of Object.keys(tokens)) {
-      if (name.endsWith('foreground') || ['border', 'input', 'ring'].includes(name)) continue
-      const partner = name === 'background' ? 'foreground' : `${name}-foreground`
+      if (name.endsWith('foreground') || UNPAIRED.includes(name)) continue
+      // A soft surface carries its own ink, not a `-foreground` (§5.2).
+      const partner =
+        name === 'background'
+          ? 'foreground'
+          : name.endsWith('-soft')
+            ? name.slice(0, -'-soft'.length)
+            : `${name}-foreground`
       expect(tokens[partner], `--${name} has no --${partner}`).toBeDefined()
     }
+  })
+})
+
+describe('the primary is the ink (ADR-0020)', () => {
+  it('fills with the foreground and labels with the background', () => {
+    expect(tokens['primary']).toBe(tokens['foreground'])
+    expect(tokens['primary-foreground']).toBe(tokens['background'])
+  })
+})
+
+describe('Lapis is an ink and a surface (ADR-0020)', () => {
+  it.each(['secondary-foreground', 'accent-foreground', 'ring', 'link'])('is --%s', (name) => {
+    expect(toHex(solid(name))).toBe(toHex(LAPIS))
+  })
+
+  it('is the secondary at 12 % and the accent at 16 % over paper', () => {
+    expect(toHex(solid('secondary'))).toBe(toHex(mix(LAPIS, PAPER, 0.12)))
+    expect(toHex(solid('accent'))).toBe(toHex(mix(LAPIS, PAPER, 0.16)))
+  })
+
+  it('is never a fill under a -foreground', () => {
+    for (const [name, value] of Object.entries(tokens)) {
+      if (value === toHex(LAPIS)) {
+        expect(['secondary-foreground', 'accent-foreground', 'ring', 'link'], name).toContain(name)
+      }
+    }
+  })
+})
+
+describe('the sale red is the destructive red on purpose (§5.2)', () => {
+  it('shares both tokens', () => {
+    expect(tokens['sale']).toBe(tokens['destructive'])
+    expect(tokens['sale-foreground']).toBe(tokens['destructive-foreground'])
   })
 })
 

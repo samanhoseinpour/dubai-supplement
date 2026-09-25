@@ -92,6 +92,22 @@ describe('DrizzleBrandRepository', () => {
     expect(page.items.map((b) => b.name)).toEqual(FA_ORDER)
   })
 
+  // The six names above land in FA_ORDER under `fa`, under code point and
+  // under this image's `en_US.utf8` default alike, so they cannot tell whether
+  // `collate "fa"` is in the ORDER BY. This pair can: و (U+0648) precedes
+  // ه (U+0647) in the Persian alphabet, while code point, `C` and `en_US.utf8`
+  // all put ه first — the pair migrate.test.ts pins on the collation itself,
+  // here through the repository's ORDER BY. Inserted in the order every
+  // other ordering would list them, so insertion order cannot pass it either.
+  it('orders by the fa collation, not by code point or the database default', async () => {
+    await insertAll([
+      { slug: 'hardcore', name: 'هاردکور' },
+      { slug: 'weider', name: 'ویدر' },
+    ])
+    const page = await repo.list({ page: 1, pageSize: 20 })
+    expect(page.items.map((b) => b.name)).toEqual(['ویدر', 'هاردکور'])
+  })
+
   it('pages with the true total and an empty page past the end', async () => {
     await insertAll(SIX)
     const second = await repo.list({ page: 2, pageSize: 4 })
@@ -112,7 +128,12 @@ describe('DrizzleBrandRepository', () => {
   })
 
   // Review Focus 5: names that differ only by a ZWNJ are two brands
-  // (uniqueness is on the slug) with one search_text, listed deterministically.
+  // (uniqueness is on the slug) with one search_text. The collation orders
+  // this pair: `fa` is deterministic, so Postgres settles ICU's tie by
+  // comparing bytes, and the space form (U+0020) sorts before the ZWNJ form
+  // (U+200C). `id` never decides here — it only separates byte-identical
+  // names, which the next test pins. The ZWNJ form is inserted first, so
+  // insertion order would list them the other way round.
   it('keeps two names that differ only by ZWNJ as two rows with one search_text', async () => {
     await insertAll([
       { slug: 'muscletech', name: 'ماسل‌تک' },
@@ -121,7 +142,25 @@ describe('DrizzleBrandRepository', () => {
     const res = await db.execute(sql`select count(distinct search_text)::int as n from brands`)
     expect(res.rows[0]).toEqual({ n: 1 })
     const page = await repo.list({ page: 1, pageSize: 20 })
-    expect(page.items.map((b) => b.slug).sort()).toEqual(['muscle-tech', 'muscletech'])
+    expect(page.items.map((b) => b.slug)).toEqual(['muscle-tech', 'muscletech'])
+  })
+
+  // The `, id` half of §5.7's ORDER BY. Two brands may share a byte-identical
+  // name (uniqueness is on the slug), and Postgres's top-N sort is not stable,
+  // so without the tie-break such a brand can land on two pages or on none.
+  // The higher id is inserted first, so heap order and id order disagree; ids
+  // compare as strings because lowercase hex sorts the way Postgres sorts uuid.
+  it('breaks a byte-identical name tie by id, so LIMIT/OFFSET pages stay stable', async () => {
+    const one = Brand.create({ slug: 'weider', name: 'ویدر' })
+    const two = Brand.create({ slug: 'weider-global', name: 'ویدر' })
+    const [lower, higher]: [Brand, Brand] = one.id < two.id ? [one, two] : [two, one]
+    for (const brand of [higher, lower]) {
+      await db.transaction((tx) => repo.insert(brand, tx))
+    }
+    const first = await repo.list({ page: 1, pageSize: 1 })
+    const second = await repo.list({ page: 2, pageSize: 1 })
+    expect(first.items.map((b) => b.id)).toEqual([lower.id])
+    expect(second.items.map((b) => b.id)).toEqual([higher.id])
   })
 
   // db.md: invariants are constraints. The entity refuses these first; the

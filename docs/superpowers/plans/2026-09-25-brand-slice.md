@@ -39,7 +39,7 @@ Five failure modes the spec implies but no happy path exercises. Each has a test
 
 1. **A slug with uppercase or an underscore reaches the API** — `GET /catalog/brands/MuscleTech`. It must be a `400 VALIDATION_FAILED` whose `errors[0].path` is `slug`, never a 404: a 404 would claim the brand does not exist, and it may. Task 7.
 2. **`?page=99` past the last page.** `200` with `items: []` and the true `total`, never a 404, never a clamp to the last page. Task 7.
-3. **A crashed seed left three of six rows.** The next `pnpm db:seed` inserts only the missing three and emits exactly three more `catalog.brand.created` rows — no row twice, no event twice, and `runOnce()` delivers every event to the logging handler. Task 8.
+3. **A crashed seed left three of nine rows.** The next `pnpm db:seed` inserts only the missing six and emits exactly six more `catalog.brand.created` rows — no row twice, no event twice, and `runOnce()` delivers every event to the logging handler. Task 8.
 4. **Arabic-script input on the write path.** A name typed with Arabic yeh/kaf or Persian digits is stored in normalised form, and a name with a ZWNJ keeps it. Task 3 (the entity) and Task 5 (`name` keeps U+200C in the row; `search_text` is the space form).
 5. **Two brands whose names differ only by ZWNJ** («ماسل تک» and «ماسل‌تک») are two rows with one `search_text` — allowed, because uniqueness is on the slug — listed deterministically by the `id` tie-break. Task 5.
 
@@ -55,6 +55,7 @@ Five failure modes the spec implies but no happy path exercises. Each has a test
 8. **`BrandCreatedLogger`** — the "logging handler" foundation §14 step 5 names — lives in `application/` as a provider of `CatalogModule`, so `OutboxRelay`'s discovery scan finds it.
 9. **`BrandService.findBySlug` exists beside `getBySlug`.** The seed needs "does it exist" as `null`, the controller needs the 404; one throwing method would force the seed to catch a `NotFoundError` as control flow.
 10. **Schemas carry `.meta({ id })`** (`Brand`, `BrandListResponse`) so the document and the generated client can name them. If `@nestjs/swagger` renders them as JSON-Schema `$defs` instead of `components.schemas` (checked in Task 7, Step 8), the ids are removed and the task report says so — nothing else depends on them.
+11. **The seed is the store's nine real brands**, read from the labels in Saman's four shelf photographs of 2026-09-25 (his instruction: the photographs never ship), not foundation §5.7's six examples — which stay as test data in every suite of Tasks 1–7. Every spelling but «بلک اسکال» (his) is a transliteration he corrects in `seed-brands.ts`: data, not a migration. Task 8 amends foundation §5.7, §7.9 and §14 in its commit; the 3c spec's D29 records what follows for the storefront.
 
 ---
 
@@ -2004,20 +2005,20 @@ git commit -m "feat(api): serve GET /catalog/brands and /catalog/brands/:slug"
 
 ---
 
-## Task 8: The seed — six brands through the service, idempotent
+## Task 8: The seed — the store's nine brands through the service, idempotent
 
-Spec §5.7 (Seed), §4.2 and §4.4 (`db:seed`, `api#seed`, `seed: node dist/seed.js`), §14 step 5. Deviation 6. Review Focus 3.
+Spec §5.7 (Seed), §4.2 and §4.4 (`db:seed`, `api#seed`, `seed: node dist/seed.js`), §14 step 5. Deviations 6 and 11. Review Focus 3.
 
 **Files:**
 
 - Create: `apps/api/src/modules/catalog/application/seed-brands.ts`, `apps/api/src/seed.ts`
-- Modify: `apps/api/src/modules/catalog/index.ts`, `apps/api/package.json`, `turbo.json`, root `package.json`
+- Modify: `apps/api/src/modules/catalog/index.ts`, `apps/api/package.json`, `turbo.json`, root `package.json`, `docs/superpowers/specs/2026-08-27-foundation-design.md` (§5.7, §7.9, §14 — the seed's content, Step 7)
 - Test: `apps/api/test/integration/seed.test.ts`
 
 **Interfaces:**
 
 - Consumes: `BrandService` (Task 4); `CatalogModule`; `OutboxRelay`, `outboxEvents`.
-- Produces: `SEED_BRANDS: readonly CreateBrandInput[]` (six, with descriptions); `seedBrands(brands: BrandService): Promise<SeedReport>` with `type SeedReport = { created: string[]; skipped: string[] }` (slugs); the entrypoint `dist/seed.js`; the scripts `pnpm db:seed` → `turbo run seed --filter=api` → `api#seed` → `node dist/seed.js`.
+- Produces: `SEED_BRANDS: readonly CreateBrandInput[]` (nine, with descriptions); `seedBrands(brands: BrandService): Promise<SeedReport>` with `type SeedReport = { created: string[]; skipped: string[] }` (slugs); the entrypoint `dist/seed.js`; the scripts `pnpm db:seed` → `turbo run seed --filter=api` → `api#seed` → `node dist/seed.js`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2064,24 +2065,24 @@ describe('seedBrands', () => {
     return res.rows[0] as { brands: number; events: number }
   }
 
-  it('creates the six brands with their descriptions, once', async () => {
+  it('creates the nine brands with their descriptions, once', async () => {
     const report = await seedBrands(brands)
-    expect(report.created).toHaveLength(6)
+    expect(report.created).toHaveLength(9)
     expect(report.skipped).toEqual([])
-    expect(await counts()).toEqual({ brands: 6, events: 6 })
-    const muscletech = await brands.findBySlug('muscletech')
-    expect(muscletech?.name).toBe('ماسل‌تک')
-    expect(muscletech?.description).toMatch(/^نیترو/)
+    expect(await counts()).toEqual({ brands: 9, events: 9 })
+    const nutriversum = await brands.findBySlug('nutriversum')
+    expect(nutriversum?.name).toBe('نوتری‌ورسوم')
+    expect(nutriversum?.description).toMatch(/^آمینو/)
     // Normalised on write: the fixture's Persian digits are stored as ASCII.
-    expect((await brands.findBySlug('dymatize'))?.description).toContain('100')
+    expect((await brands.findBySlug('7nutrition'))?.description).toContain('100')
   })
 
   it('writes nothing and emits nothing on a second run', async () => {
     await seedBrands(brands)
     const second = await seedBrands(brands)
     expect(second.created).toEqual([])
-    expect(second.skipped).toHaveLength(6)
-    expect(await counts()).toEqual({ brands: 6, events: 6 })
+    expect(second.skipped).toHaveLength(9)
+    expect(await counts()).toEqual({ brands: 9, events: 9 })
   })
 
   // Review Focus 3: a crashed seed left three rows; the next run fills the gap, once.
@@ -2090,11 +2091,11 @@ describe('seedBrands', () => {
     const report = await seedBrands(brands)
     expect(report.created).toEqual(SEED_BRANDS.slice(3).map((b) => b.slug))
     expect(report.skipped).toEqual(SEED_BRANDS.slice(0, 3).map((b) => b.slug))
-    expect(await counts()).toEqual({ brands: 6, events: 6 })
+    expect(await counts()).toEqual({ brands: 9, events: 9 })
     const perSlug = await db.execute(
       sql`select payload->>'slug' as slug, count(*)::int as n from outbox_events group by 1 order by 1`,
     )
-    expect(perSlug.rows).toHaveLength(6)
+    expect(perSlug.rows).toHaveLength(9)
     expect(perSlug.rows.every((row) => (row as { n: number }).n === 1)).toBe(true)
   })
 
@@ -2124,41 +2125,60 @@ import type { CreateBrandInput } from '../domain/brand.js'
 import type { BrandService } from './brand.service.js'
 
 /**
- * The six brands of foundation §5.7 — three with a ZWNJ on purpose — each
- * with the one-line description the storefront's brand tile shows (3c).
- * Persian here is data, not copy: the API still speaks English. The entity
- * normalises on write, so «۱۰۰» is stored as `100` and displayed Persian.
+ * The store's nine brands, read from the labels on Saman's shelf on
+ * 2026-09-25 (foundation §5.7 as amended that day; Deviation 11) — one with
+ * a ZWNJ on purpose — each with the one-line description the storefront's
+ * brand card shows (3c). Persian here is data, not copy: the API still
+ * speaks English. The entity normalises on write, so «۱۰۰» is stored as
+ * `100` and displayed Persian. Every spelling but «بلک اسکال» (Saman's) is a
+ * transliteration he may correct here — data, not a migration.
  */
 export const SEED_BRANDS: readonly CreateBrandInput[] = [
   {
-    slug: 'optimum-nutrition',
-    name: 'اپتیموم نوتریشن',
-    description: 'سازندهٔ گلد استاندارد، پرفروش‌ترین پروتئین وی جهان.',
+    slug: 'black-skull',
+    name: 'بلک اسکال',
+    description:
+      'برند برزیلی مکمل‌های ورزشی؛ وی ایزوله و وی اچ‌دی، گلوتامین، بتاآلانین، زد‌ام‌ای و کروم پیکولینات.',
   },
   {
-    slug: 'dymatize',
-    name: 'دایماتایز',
-    description: 'آیزو ۱۰۰؛ پروتئین هیدرولیزهٔ سریع‌جذب برای بعد از تمرین.',
+    slug: 'nutriversum',
+    name: 'نوتری‌ورسوم',
+    description: 'آمینو انرژی با طعم بلک‌کارنت؛ ۲۷۰ گرم، ۴۵ سروینگ.',
+  },
+  {
+    slug: 'applied-nutrition',
+    name: 'اپلاید نوتریشن',
+    description: 'برند بریتانیایی؛ اچ‌ام‌بی ۵۰۰ میلی‌گرمی، ۱۲۰ کپسول.',
+  },
+  {
+    slug: 'aavelone-pharma',
+    name: 'آولون فارما',
+    description: 'تست بوستر ۳۲۰۰؛ ۱۲۰ کپسول، هر سروینگ چهار کپسول.',
+  },
+  {
+    slug: 'belissima',
+    name: 'بلیسیما',
+    description: 'تغذیهٔ زیبایی؛ کلاژن پلاس با هیالورونیک اسید و بیوتین، طعم توت‌فرنگی، ۲۶۴ گرم.',
+  },
+  {
+    slug: 'labrada',
+    name: 'لابرادا',
+    description: 'برند آمریکایی؛ کریالین، کراتین مونوهیدرات خالص، ۲۵۰ گرم، ۵۰ سروینگ.',
+  },
+  {
+    slug: 'galvanize',
+    name: 'گالوانایز',
+    description: 'ای‌ای‌ای زیرو با طعم گیلاس؛ آمینواسیدهای ضروری برای عملکرد و ریکاوری.',
   },
   {
     slug: 'nutrex',
     name: 'نوترکس',
-    description: 'لیپو-۶ و آوت‌لیفت؛ چربی‌سوز و پمپ برای تمرین‌های سنگین.',
+    description: 'برند آمریکایی؛ ال‌کارنیتین مایع ۳۰۰۰ برای رژیم و انرژی تمرین.',
   },
   {
-    slug: 'muscletech',
-    name: 'ماسل‌تک',
-    description: 'نیترو-تک و کراتین پلاتینیوم؛ سی سال پژوهش در مکمل‌های ورزشی.',
-  },
-  {
-    slug: 'bsn',
-    name: 'بی‌اس‌ان',
-    description: 'سین‌تا-۶ و ان‌او-اکسپلود؛ مکمل‌های آمریکایی برای حجم و انرژی تمرین.',
-  },
-  {
-    slug: 'myprotein',
-    name: 'مای‌پروتئین',
-    description: 'برند بریتانیایی با بیشترین تنوع طعم در پروتئین و اسنک.',
+    slug: '7nutrition',
+    name: 'سون نوتریشن',
+    description: 'ساخت لهستان؛ سی‌ال‌ای ۱۰۰۰، ۱۰۰ سافت‌ژل ۱۰۰۰ میلی‌گرمی.',
   },
 ]
 
@@ -2271,16 +2291,48 @@ Expected: PASS, four seed tests.
 - [ ] **Step 6: Run the real thing twice**
 
 Run: `pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm db:seed`
-Expected: the first run logs six `brand seeded` lines and `seed finished` with six created; the second logs `seed finished` with six skipped and no `brand seeded` line. Exit code 0 both times.
+Expected: the first run logs nine `brand seeded` lines and `seed finished` with nine created; the second logs `seed finished` with nine skipped and no `brand seeded` line. Exit code 0 both times.
 
-- [ ] **Step 7: Verify and commit**
+- [ ] **Step 7: Amend the foundation spec — the seed's content (Deviation 11)**
+
+`docs/superpowers/specs/2026-08-27-foundation-design.md`, four edits in the spec's own amendment style: a sentence appended to the end of an existing bullet or numbered item, after one space, opening with `**Amended 2026-09-25**`. Find each anchor with `grep -n`; the anchors are the opening words below. Nothing else in the file changes.
+
+1. §5.7 — the bullet opening `- **Seed** (` gains, at its end:
+
+   ```markdown
+   **Amended 2026-09-25** (3b plan, Task 8; 3c spec D29): the seed is the store's own brands, read from Saman's shelf — nine of them, in `fa` order: `aavelone-pharma` «آولون فارما», `applied-nutrition` «اپلاید نوتریشن», `black-skull` «بلک اسکال», `belissima` «بلیسیما», `7nutrition` «سون نوتریشن», `galvanize` «گالوانایز», `labrada` «لابرادا», `nutrex` «نوترکس», `nutriversum` «نوتری‌ورسوم» (the one name with a ZWNJ) — each with a one-line Persian `description`. The six brands above stay as test data in the catalog suites; the idempotence rule is unchanged.
+   ```
+
+2. §7.9 — the bullet opening `- Playwright (` gains, at its end:
+
+   ```markdown
+   **Amended 2026-09-25** (3b plan, Task 8): with the real seed, `/brands` lists the nine seeded names and the ZWNJ route is `/brands/nutriversum` («نوتری‌ورسوم»).
+   ```
+
+3. §14 — the numbered item opening ``5. `pnpm db:seed` inserts the six brands`` gains, at its end:
+
+   ```markdown
+   **Amended 2026-09-25** (3b plan, Task 8): nine brands, §5.7.
+   ```
+
+4. §14 — the numbered item opening `` 1. `pnpm install`, `pnpm db:up` `` gains, at its end:
+
+   ```markdown
+   **Amended 2026-09-25** (3b plan, Task 8): the nine seeded names; `/brands/nutriversum` renders «نوتری‌ورسوم».
+   ```
+
+Run: `node_modules/.bin/prettier --write docs/superpowers/specs/2026-08-27-foundation-design.md`
+Then run, on its own line and never piped: `pnpm check:docs`
+Expected: `check-docs: OK`.
+
+- [ ] **Step 8: Verify and commit**
 
 Run: `pnpm check`
-Expected: green — `boundaries.test.ts` still parses `turbo.json`; `src/seed.ts` classifies as an entrypoint and imports only the barrel.
+Expected: green — `boundaries.test.ts` still parses `turbo.json`; `src/seed.ts` classifies as an entrypoint and imports only the barrel; the docs check accepts the amended spec.
 
 ```bash
-git add apps/api/src/modules/catalog/application/seed-brands.ts apps/api/src/modules/catalog/index.ts apps/api/src/seed.ts apps/api/test/integration/seed.test.ts apps/api/package.json turbo.json package.json
-git commit -m "feat(api): seed the six brands through BrandService, idempotently"
+git add apps/api/src/modules/catalog/application/seed-brands.ts apps/api/src/modules/catalog/index.ts apps/api/src/seed.ts apps/api/test/integration/seed.test.ts apps/api/package.json turbo.json package.json docs/superpowers/specs/2026-08-27-foundation-design.md
+git commit -m "feat(api): seed the store's nine brands through BrandService, idempotently"
 ```
 
 ---
@@ -2340,7 +2392,7 @@ in the seed. Rules: `.claude/rules/api.md`, `db.md`, `persian.md`,
 | ------------------------------------ | ------------------------------------------------------------------ |
 | `pnpm db:up` · `pnpm db:migrate`     | the four services; apply `drizzle/*.sql` under an advisory lock    |
 | `pnpm db:generate --name=<name>`     | the next migration from `src/**/schema.ts`; commit the SQL         |
-| `pnpm db:seed`                       | the six brands through `BrandService`, idempotent by slug          |
+| `pnpm db:seed`                       | the nine brands through `BrandService`, idempotent by slug         |
 | `pnpm openapi:generate`              | build, write `openapi.json`, regenerate the client's `schema.d.ts` |
 | `pnpm test --filter=api`             | unit — no store                                                    |
 | `pnpm test:integration --filter=api` | Testcontainers — needs Docker                                      |
@@ -2437,7 +2489,7 @@ apps/api/CLAUDE.md
 packages/contracts/CLAUDE.md
 ```
 
-`README.md`: run `grep -n "Phase 3b" README.md` and edit both hits — the status paragraph's "the catalogue arrives with Phase 3b and the brand pages with 3c" becomes "the catalogue's Brand slice (3b) is built; the brand pages arrive with 3c", and "there is nothing to seed until Phase 3b" becomes "`pnpm db:seed` inserts the six brands".
+`README.md`: run `grep -n "Phase 3b" README.md` and edit both hits — the status paragraph's "the catalogue arrives with Phase 3b and the brand pages with 3c" becomes "the catalogue's Brand slice (3b) is built; the brand pages arrive with 3c", and "there is nothing to seed until Phase 3b" becomes "`pnpm db:seed` inserts the store's nine brands".
 
 `.claude/skills/new-api-module/SKILL.md`: replace the blockquote
 
@@ -2492,11 +2544,11 @@ Then:
 
 ```bash
 node -e "fetch('http://localhost:3001/catalog/brands').then(r=>r.json()).then(j=>console.log(j.total, j.items.map(b=>b.name).join(' | ')))"
-node -e "fetch('http://localhost:3001/catalog/brands/muscletech').then(r=>r.json()).then(j=>console.log(j.name.includes('‌'), j.description))"
+node -e "fetch('http://localhost:3001/catalog/brands/nutriversum').then(r=>r.json()).then(j=>console.log(j.name.includes('‌'), j.description))"
 node -e "fetch('http://localhost:3001/catalog/brands/no-such-brand').then(async r=>console.log(r.status, r.headers.get('content-type'), (await r.json()).code))"
 ```
 
-Expected: `6 اپتیموم نوتریشن | بی‌اس‌ان | دایماتایز | ماسل‌تک | مای‌پروتئین | نوترکس`; `true` and the description; `404 application/problem+json CATALOG_BRAND_NOT_FOUND`. With `PROCESS_ROLE=all` in `.env`, the running API's relay also drains the six outbox rows and logs six `brand created` lines — quote one in the task report. Stop the dev server.
+Expected: `9 آولون فارما | اپلاید نوتریشن | بلک اسکال | بلیسیما | سون نوتریشن | گالوانایز | لابرادا | نوترکس | نوتری‌ورسوم`; `true` and the description; `404 application/problem+json CATALOG_BRAND_NOT_FOUND`. With `PROCESS_ROLE=all` in `.env`, the running API's relay also drains the nine outbox rows and logs nine `brand created` lines — quote one in the task report. Stop the dev server.
 
 - [ ] **Step 3: The pull request**
 
@@ -2531,13 +2583,13 @@ Once `openapi` has reported green on this pull request, Saman adds it to the rul
 The phase is done when all of the following hold:
 
 ```bash
-pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm db:seed   # second run: six skipped, nothing written
+pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm db:seed   # second run: nine skipped, nothing written
 pnpm check                                                     # unit, integration, boundaries, the openapi freshness test, sherif, docs, format
 pnpm openapi:generate && git diff --exit-code -- apps/api/openapi.json packages/api-client/src/generated
 pnpm audit:authors
 ```
 
-and a running API answers `GET /catalog/brands` with the six names in `fa` order, `GET /catalog/brands/muscletech` with the ZWNJ intact, and `GET /catalog/brands/no-such-brand` with a `404` problem `CATALOG_BRAND_NOT_FOUND`. The `openapi` job is green on the pull request and then required.
+and a running API answers `GET /catalog/brands` with the nine names in `fa` order, `GET /catalog/brands/nutriversum` with the ZWNJ intact, and `GET /catalog/brands/no-such-brand` with a `404` problem `CATALOG_BRAND_NOT_FOUND`. The `openapi` job is green on the pull request and then required.
 
 **Deliberately not in 3b**, each with its owner: `requestApi()` and header forwarding beyond default headers (the identity spec); `Money` (the first priced aggregate); the four Iranian-format refinements (identity and customers); a search route — `search_text` is indexed and unused until the products slice queries it; any write route; images or logos on a brand (the media spec); `packages/contracts/src/catalog/product.ts` (the products spec).
 

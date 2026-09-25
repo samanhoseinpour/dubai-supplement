@@ -70,7 +70,7 @@ export const copy = {
       iconOnly: 'فقط آیکن',
       block: 'تمام‌عرض',
       withHint: 'با راهنما',
-      inline: 'در متن',
+      standalone: 'مستقل',
     },
     samples: {
       heading: 'پروتئین وی ایزوله',

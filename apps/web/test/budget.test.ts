@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { gzipSync } from 'node:zlib'
@@ -40,6 +40,42 @@ function gzippedJs(files: readonly string[]): number {
 
 function kb(bytes: number): string {
   return `${(bytes / KB).toFixed(1)} KB`
+}
+
+// The physical inline-axis utilities lint rejects (foundation §7.2), as they
+// open a class name. A whole stem is followed by its value or nothing:
+// `rounded-lg` and `border-ring` open with `rounded-l` and `border-r`.
+const PHYSICAL_STEM =
+  /^(?:(?:ml|mr|pl|pr|left|right|float|tracking)-|(?:text-left|text-right|border-l|border-r|rounded-l|rounded-r|rounded-tl|rounded-tr|rounded-bl|rounded-br)(?:-|$))/
+
+/** Every stylesheet the build ships. */
+function shippedStylesheets(): string[] {
+  return ['static/chunks', 'static/css']
+    .map((dir) => join(next, dir))
+    .filter((dir) => existsSync(dir))
+    .flatMap((dir) =>
+      readdirSync(dir, { recursive: true, encoding: 'utf8' })
+        .filter((file) => file.endsWith('.css'))
+        .map((file) => join(dir, file)),
+    )
+}
+
+/** The selector list of every style rule in `css`; at-rule preludes are not selectors. */
+function selectorLists(css: string): string[] {
+  return [...css.matchAll(/([^{};]+)\{/g)]
+    .map(([, prelude = '']) => prelude.trim())
+    .filter((prelude) => prelude !== '' && !prelude.startsWith('@'))
+}
+
+/** The class names a selector list names, as escaped in the stylesheet: `md\:ml-4`. */
+function classNames(selectors: string): string[] {
+  return [...selectors.matchAll(/\.((?:\\.|[\w-])+)/g)].map(([, name = '']) => name)
+}
+
+/** The utility behind a class name — no variants, no important marker, no sign: `md\:-ml-4` → `ml-4`. */
+function utilityStem(className: string): string {
+  const utility = className.split('\\:').at(-1) ?? className
+  return utility.replace(/^\\!/, '').replace(/\\!$/, '').replace(/^-/, '')
 }
 
 /** The framework runtime Next loads on every route. */
@@ -99,5 +135,23 @@ describe('budgets', () => {
 
   it('keeps the vendored font within 120 KB', () => {
     expect(statSync(FONT).size).toBeLessThanOrEqual(FONT_BUDGET)
+  })
+
+  // Tailwind generates a class for every candidate its source scan finds, and
+  // the lint fixtures under test/ are full of physical classes; globals.css
+  // excludes them with `@source not`. Named per selector so a failure says
+  // which class leaked, and from which stylesheet.
+  it('ships no physical inline-axis class', () => {
+    const stylesheets = shippedStylesheets()
+    expect(stylesheets.length, 'stylesheets in the build').toBeGreaterThan(0)
+
+    const offending = stylesheets.flatMap((file) =>
+      selectorLists(readFileSync(file, 'utf8'))
+        .filter((selectors) =>
+          classNames(selectors).some((n) => PHYSICAL_STEM.test(utilityStem(n))),
+        )
+        .map((selectors) => `${relative(next, file)}: ${selectors}`),
+    )
+    expect(offending, 'physical utilities in the production stylesheet').toEqual([])
   })
 })

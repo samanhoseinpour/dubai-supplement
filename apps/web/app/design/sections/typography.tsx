@@ -1,4 +1,4 @@
-import { formatToman } from '@ds/persian'
+import { formatNumber } from '@ds/persian'
 import { copy } from '@/lib/copy'
 
 const SCALE = [
@@ -25,7 +25,8 @@ export function TypographySection() {
       ))}
       <p className="text-body prose">{copy.design.samples.paragraph}</p>
       <p className="text-body">{copy.design.samples.brandSentence}</p>
-      <p className="text-title font-bold tabular-nums">{formatToman(28_500_000n)}</p>
+      {/* Tabular digits on the scale — a quantity, because a price reaches the page only through Price (§8.1). */}
+      <p className="text-title font-bold tabular-nums">{formatNumber(1_234_567n)}</p>
     </div>
   )
 }

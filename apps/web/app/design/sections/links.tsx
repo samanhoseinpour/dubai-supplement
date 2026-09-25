@@ -16,7 +16,7 @@ export function LinksSection() {
           data-target=""
           className={buttonVariants({ variant: 'secondary' })}
         >
-          {copy.design.states.inline}
+          {copy.design.states.standalone}
         </Link>
       </div>
     </div>

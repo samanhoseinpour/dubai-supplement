@@ -40,7 +40,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             {copy.skipToContent}
           </a>
           <Header />
-          <main id="main" tabIndex={-1} className="container-page grow py-8">
+          {/* scroll-mt-16 keeps a focused #main, or a future #anchor, below the sticky min-h-16 header. */}
+          <main id="main" tabIndex={-1} className="container-page grow scroll-mt-16 py-8">
             {children}
           </main>
           <Footer year={<CopyrightYear />} />

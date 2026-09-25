@@ -71,3 +71,8 @@ apps/web/vitest.budget.config.ts
 apps/web/playwright.config.ts
 apps/web/app/globals.css
 apps/web/app/fonts/OFL.txt
+packages/api-client/package.json
+packages/api-client/tsconfig.json
+packages/api-client/tsconfig.build.json
+packages/api-client/eslint.config.js
+packages/api-client/vitest.config.ts

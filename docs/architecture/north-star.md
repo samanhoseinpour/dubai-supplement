@@ -43,7 +43,7 @@ All of it runs inside `pnpm check`.
    `@ds/contracts → @ds/persian` (runtime). `@ds/persian` has no workspace
    dependencies and owns the only `@persian-tools` dependency.
 3. `apps/web` never imports from `apps/api`, not even types. It uses
-   `@ds/contracts` and `@ds/api-client` only.
+   `@ds/contracts`, `@ds/api-client` and `@ds/persian` only.
 4. `modules/A/**` may import `modules/B/index.ts` and nothing deeper.
 5. `domain/**` is pure TypeScript: no `@nestjs/*`, no `drizzle-orm`, no `pg`,
    no `ioredis`, no sibling layers.

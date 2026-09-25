@@ -26,9 +26,10 @@ So the block is Docker Hub specifically, not the network generally.
 
 ## Route 1 — VPN (what this machine uses)
 
-Connect the VPN before `pnpm db:up`, `pnpm test:integration` or `pnpm e2e`.
-Nothing to configure; `docker pull` then succeeds. This is the chosen
-approach and needs no repository change.
+Connect the VPN before `pnpm db:up`, `pnpm test:integration`,
+`pnpm e2e:install` (Chromium) or `pnpm e2e`. Nothing to configure;
+`docker pull` then succeeds. This is the chosen approach and needs no
+repository change.
 
 ## Route 2 — a registry mirror
 

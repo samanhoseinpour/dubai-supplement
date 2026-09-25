@@ -59,3 +59,15 @@ packages/config-eslint/next.js
 packages/config-eslint/next.d.ts
 packages/config-eslint/web-alias-resolver.js
 apps/web/eslint.config.js
+apps/web/CLAUDE.md
+apps/web/package.json
+apps/web/tsconfig.json
+apps/web/next.config.ts
+apps/web/postcss.config.mjs
+apps/web/components.json
+apps/web/.env.example
+apps/web/vitest.config.ts
+apps/web/vitest.budget.config.ts
+apps/web/playwright.config.ts
+apps/web/app/globals.css
+apps/web/app/fonts/OFL.txt

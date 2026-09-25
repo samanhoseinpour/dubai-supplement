@@ -19,6 +19,21 @@
     },
     { "groupName": "drizzle", "matchPackageNames": ["drizzle-orm", "drizzle-kit"] },
     {
+      "groupName": "tailwind",
+      "matchPackageNames": ["tailwindcss", "@tailwindcss/**", "prettier-plugin-tailwindcss"]
+    },
+    {
+      "groupName": "ui",
+      "matchPackageNames": [
+        "@base-ui/react",
+        "lucide-react",
+        "next-themes",
+        "class-variance-authority",
+        "clsx",
+        "tailwind-merge"
+      ]
+    },
+    {
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
       "automerge": true

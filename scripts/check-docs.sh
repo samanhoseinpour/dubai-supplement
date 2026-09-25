@@ -48,7 +48,8 @@ assert_contains() { # assert_contains <file> <needle>...
   f="$1"; shift
   [ -f "$f" ] || { fail "missing file: $f"; return; }
   for needle in "$@"; do
-    grep -Fq "$needle" "$f" || fail "$f no longer contains: $needle"
+    # -e: a needle may begin with "--" (a CSS custom property).
+    grep -Fq -e "$needle" "$f" || fail "$f no longer contains: $needle"
   done
 }
 assert_contains lefthook.yml "pre-commit:" "commit-msg:" "pre-push:" \
@@ -58,6 +59,10 @@ assert_contains .gitleaks.toml "useDefault = true"
 assert_contains pnpm-workspace.yaml "catalogMode: strict" "minimumReleaseAge"
 assert_contains package.json '"packageManager"' '"check:docs"' '"audit:authors"'
 assert_contains commitlint.config.mjs "config-conventional" "scope-enum"
+assert_contains apps/web/app/globals.css '--color-*: initial' '@custom-variant dark'
+assert_contains apps/web/next.config.ts 'cacheComponents: true' 'reactCompiler: true' "output: 'standalone'"
+assert_contains packages/config-eslint/next.js 'enforce-logical-properties' 'no-unknown-classes' 'boundaries/dependencies'
+assert_contains prettier.config.mjs 'prettier-plugin-tailwindcss'
 
 # 5. Shell files are shellcheck-clean.
 if command -v shellcheck >/dev/null 2>&1; then

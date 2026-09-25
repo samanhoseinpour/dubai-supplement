@@ -51,7 +51,9 @@ export function ThemeToggle({ className }: { className?: string }) {
   const Icon = mounted ? ICONS[current] : IconSystem
 
   function choose(next: Theme) {
-    if (next === current) return
+    // Against the stored value, not `current`: an unknown value is shown as
+    // «سیستم», and choosing «سیستم» must still replace it.
+    if (next === theme) return
     if (!('startViewTransition' in document) || prefersReducedMotion()) {
       setTheme(next)
       return

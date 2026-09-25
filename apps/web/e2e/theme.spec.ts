@@ -46,14 +46,19 @@ test.describe('theme (spec §5.6)', () => {
     await expect(page.getByRole('menuitemradio')).toHaveCount(3)
   })
 
-  test('an unknown stored value still renders light and can be changed (Review Focus 2)', async ({
+  test('an unknown stored value still renders light and yields to «سیستم» and to «تاریک» (Review Focus 2)', async ({
     page,
   }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('ds-theme', 'blue')
     })
     await page.goto('/')
+    await expect(html(page)).toHaveAttribute('data-theme', 'blue')
     await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(250, 250, 252)')
+    // The menu shows «سیستم» selected for the unknown value; choosing it must
+    // still act. Playwright's default colour scheme is light.
+    await choose(page, copy.theme.system)
+    await expect(html(page)).toHaveAttribute('data-theme', 'light')
     await choose(page, copy.theme.dark)
     await expect(html(page)).toHaveAttribute('data-theme', 'dark')
     await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(8, 8, 19)')

@@ -112,7 +112,7 @@ describe('the catalog routes', () => {
       expect(res.statusCode).toBe(200)
       const brand = BrandSchema.strict().parse(res.json())
       expect(brand.name).toBe('ماسل‌تک')
-      expect(brand.name).toContain('‌')
+      expect(brand.name).toContain('\u200c')
       expect(brand).not.toHaveProperty('description')
     })
 
@@ -131,7 +131,22 @@ describe('the catalog routes', () => {
     it('answers 400 naming slug for a slug that is not lowercase Latin', async () => {
       const res = await app.inject({ method: 'GET', url: '/catalog/brands/MuscleTech' })
       expect(res.statusCode).toBe(400)
-      expect(ProblemDetailsSchema.parse(res.json()).errors?.[0]?.path).toBe('slug')
+      expect(res.headers['content-type']).toContain('application/problem+json')
+      const problem = ProblemDetailsSchema.parse(res.json())
+      expect(problem.code).toBe('VALIDATION_FAILED')
+      expect(problem.errors?.[0]?.path).toBe('slug')
+    })
+
+    // Fastify's router refuses a parameter longer than its default 100
+    // characters with a bare 414 before Nest runs; app.factory.ts raises the
+    // cap so the contract's .max(64) answers instead, as the same 400 problem.
+    it('answers 400 naming slug, not a bare 414, for a slug over 100 characters', async () => {
+      const res = await app.inject({ method: 'GET', url: `/catalog/brands/${'a'.repeat(101)}` })
+      expect(res.statusCode).toBe(400)
+      expect(res.headers['content-type']).toContain('application/problem+json')
+      const problem = ProblemDetailsSchema.parse(res.json())
+      expect(problem.code).toBe('VALIDATION_FAILED')
+      expect(problem.errors?.[0]?.path).toBe('slug')
     })
   })
 

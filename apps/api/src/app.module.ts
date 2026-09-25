@@ -13,8 +13,8 @@ import { StorageModule } from './infra/storage/index.js'
 import { CatalogModule } from './modules/catalog/index.js'
 
 // Config, logging, the data layer, the outbox relay, Redis, object storage,
-// the global throttler and health. Validation, the problem filter and the
-// security plugins are wired in main.ts.
+// the global throttler, health and the catalog context. Validation, the
+// problem filter and the security plugins are wired in app.factory.ts.
 @Module({
   imports: [
     ConfigModule,

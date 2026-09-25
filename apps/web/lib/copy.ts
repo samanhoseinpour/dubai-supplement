@@ -80,6 +80,8 @@ export const copy = {
       label: 'شمارهٔ موبایل',
       hint: 'با ۰۹ شروع می‌شود',
       placeholder: '۰۹۱۲ ۳۴۵ ۶۷۸۹',
+      phonePartial: '۰۹۱',
+      phoneFull: '۰۹۱۲۳۴۵۶۷۸۹',
       error: 'شمارهٔ موبایل معتبر نیست',
       cardTitle: 'کراتین مونوهیدرات',
       cardBody: 'خالص، بدون طعم، ۳۰۰ گرم',

@@ -138,6 +138,30 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
+  openapi:
+    if: github.event_name != 'schedule'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # src/openapi.ts boots AppModule without listening and needs a
+      # schema-valid environment, not a live store (§5.5, §10.1); the example
+      # holds the local values and no secret.
+      - run: cp apps/api/.env.example apps/api/.env
+      - run: pnpm openapi:generate
+      # A diff means a contract or a route changed without regenerating:
+      # generated.md's rule, enforced. Both paths are prettier-ignored, so
+      # formatting cannot manufacture a diff.
+      - run: git diff --exit-code -- apps/api/openapi.json packages/api-client/src/generated
+
   authors:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest

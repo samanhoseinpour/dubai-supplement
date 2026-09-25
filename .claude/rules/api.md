@@ -7,8 +7,10 @@ paths:
 
 - **Fastify adapter, not Express.** `@nestjs/platform-express` is banned by
   lint. Adapter options live in one place: `bodyLimit` 1 MiB, `rawBody: true`,
-  `trustProxy` from the `TRUST_PROXY` env var, and `logger: false` because
-  nestjs-pino owns logging.
+  `trustProxy` from the `TRUST_PROXY` env var, `logger: false` because
+  nestjs-pino owns logging, and the router's `maxParamLength` tied to Node's
+  `maxHeaderSize`, so a malformed path parameter always reaches validation as
+  a 400 problem, never Fastify's bare 414.
 - **`trustProxy` is never a number.** Fastify 5.12.5 fails a numeric
   `trustProxy` closed — it returns `() => false` and trusts nothing, with no
   error, so `req.ip` silently becomes the socket peer and every client behind

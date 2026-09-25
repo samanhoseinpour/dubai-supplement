@@ -235,7 +235,7 @@
     outline-offset: 2px;
   }
 
-  /* The Lapis tint under the ink (15.2:1; the tokens test measures the pair).
+  /* The Lapis tint under the ink (15.18:1; the tokens test measures the pair).
      Not the primary: near-black would swallow the selection. */
   ::selection {
     background-color: var(--accent);

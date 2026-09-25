@@ -371,6 +371,9 @@ catalogs:
     typescript-eslint:
       specifier: 8.70.1
       version: 8.70.1
+    uuid:
+      specifier: 14.0.2
+      version: 14.0.2
     vite:
       specifier: 8.3.0
       version: 8.3.0
@@ -433,6 +436,9 @@ importers:
       '@ds/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@ds/persian':
+        specifier: workspace:*
+        version: link:../../packages/persian
       '@fastify/cookie':
         specifier: 'catalog:'
         version: 11.1.2
@@ -490,6 +496,9 @@ importers:
       rxjs:
         specifier: 'catalog:'
         version: 7.8.2
+      uuid:
+        specifier: 'catalog:'
+        version: 14.0.2
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -6530,6 +6539,10 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  uuid@14.0.2:
+    resolution: {integrity: sha512-xZe/16rV4aa+HGSOCiY2YeLT1OybRLrrkL/Rqaq7p7GMVXjFh+6wN4oMYgjFmnSnhY8t6Xpdl2l9qmnHYuMHwQ==}
+    hasBin: true
+
   valibot@1.5.0:
     resolution: {integrity: sha512-nil6AkP2TChWL43Z5uJ6GTxX01CUA+g8LWUM+N/rB9NBbkUMaUsi9PUNzlUPgoKASgmx9f7eGOYpJ04/fSa6FQ==}
     peerDependencies:
@@ -12365,6 +12378,8 @@ snapshots:
       react: 19.3.0
 
   util-deprecate@1.0.2: {}
+
+  uuid@14.0.2: {}
 
   valibot@1.5.0(typescript@6.0.3):
     optionalDependencies:

@@ -78,6 +78,18 @@ describe('unknown classes — the deleted scales (spec §5.1)', () => {
   })
 })
 
+describe('the dark variant (ADR-0021)', () => {
+  // ADR-0021: one theme, the variant does not exist. Tailwind's built-in
+  // `dark` is a `prefers-color-scheme` query, so the ban is by name.
+  it.each(['dark:bg-card', 'dark:hover:bg-accent', 'md:dark:bg-card'])(
+    'rejects "%s"',
+    async (className) => {
+      const messages = await lint('components/ui/fixture.tsx', jsx(className))
+      expect(messages.some(rule('no-restricted-classes'))).toBe(true)
+    },
+  )
+})
+
 describe('restricted classes (spec §6.3, §11)', () => {
   it.each([
     'bg-[#ff0000]',

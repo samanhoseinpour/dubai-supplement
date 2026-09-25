@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+/* The lint fixtures and the instruction file quote the classes lint rejects;
+   test/budget.test.ts proves none of them ships. */
+@source not '../test';
+@source not '../**/*.md';
 
 /*
  * The design system's single source of truth (spec §5–§7). Every colour,
@@ -295,6 +299,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     transition-property: color, background-color, border-color, box-shadow, opacity;
+    transition-duration: var(--duration-quick);
     &:active {
       transform: none;
     }

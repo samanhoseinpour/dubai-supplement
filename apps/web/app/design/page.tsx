@@ -10,12 +10,11 @@ import { PriceSection } from './sections/price'
 import { SkeletonsSection } from './sections/skeletons'
 import { SurfacesSection } from './sections/surfaces'
 import { TextFieldsSection } from './sections/text-fields'
-import { ThemeToggleSection } from './sections/theme-toggle'
 import { TypographySection } from './sections/typography'
-import { ThemePanel } from './theme-panel'
 
 // D14: a real route, statically rendered, never indexed. Spec §4.5: a
-// primitive or state that is not here does not exist.
+// primitive or state that is not here does not exist. One theme (ADR-0021):
+// each section renders once, on the page's own surface.
 export const metadata: Metadata = {
   title: copy.design.title,
   robots: { index: false, follow: false },
@@ -32,7 +31,6 @@ const SECTIONS: ReadonlyArray<{ id: string; title: string; Section: ComponentTyp
   { id: 'skeletons', title: copy.design.sections.skeletons, Section: SkeletonsSection },
   { id: 'price', title: copy.design.sections.price, Section: PriceSection },
   { id: 'empty-state', title: copy.design.sections.emptyState, Section: EmptyStateSection },
-  { id: 'theme-toggle', title: copy.design.sections.themeToggle, Section: ThemeToggleSection },
 ]
 
 export default function DesignPage() {
@@ -47,13 +45,8 @@ export default function DesignPage() {
           <h2 id={`${id}-title`} className="text-title font-bold">
             {title}
           </h2>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ThemePanel theme="light">
-              <Section />
-            </ThemePanel>
-            <ThemePanel theme="dark">
-              <Section />
-            </ThemePanel>
+          <div className="flex flex-col gap-6 rounded-lg border p-6">
+            <Section />
           </div>
         </section>
       ))}

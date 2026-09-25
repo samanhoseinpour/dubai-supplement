@@ -5,10 +5,7 @@ import {
   CircleAlert,
   ExternalLink,
   LoaderCircle,
-  Monitor,
-  Moon,
   PackageOpen,
-  Sun,
   X,
 } from 'lucide-react'
 
@@ -18,9 +15,6 @@ import {
 export const IconForward = ChevronLeft
 export const IconBack = ChevronRight
 export const IconExternal = ExternalLink
-export const IconSun = Sun
-export const IconMoon = Moon
-export const IconSystem = Monitor
 export const IconClose = X
 export const IconCheck = Check
 export const IconSpinner = LoaderCircle

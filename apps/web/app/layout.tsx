@@ -1,5 +1,5 @@
 import { formatJalaliYear } from '@ds/persian'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { cacheLife } from 'next/cache'
 import type { ReactNode } from 'react'
 import { Footer } from '@/components/site/footer'
@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', locale: 'fa_IR', siteName: SITE_NAME },
 }
 
+// One light theme (ADR-0021): the browser is told so here, and
+// `color-scheme: light` on `:root` in globals.css tells the stylesheet.
+export const viewport: Viewport = { colorScheme: 'light' }
+
 // Cache Components reject `new Date()` in a prerendered component. Inside
 // 'use cache' it is the entry's creation time, refreshed daily — which is
 // exactly what a copyright year is. The directive is allowed only on an async
@@ -30,7 +34,7 @@ async function CopyrightYear() {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="fa" dir="rtl" className={vazirmatn.variable} suppressHydrationWarning>
+    <html lang="fa" dir="rtl" className={vazirmatn.variable}>
       <body className="flex min-h-dvh flex-col">
         <Providers>
           <a

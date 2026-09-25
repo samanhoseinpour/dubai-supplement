@@ -33,4 +33,11 @@ describe('lib/copy', () => {
     expect(copy.siteName).toBe(SITE_NAME)
     expect(SITE_NAME).toBe('دبی ساپلیمنت')
   })
+
+  it('knows one theme: no toggle, no panels (ADR-0021)', () => {
+    expect(copy).not.toHaveProperty('theme')
+    expect(copy.design).not.toHaveProperty('panels')
+    expect(copy.design.sections).not.toHaveProperty('themeToggle')
+    expect(copy.design.intro).toBe('هر جزء در هر حالت. جزئی که اینجا نیست، وجود ندارد.')
+  })
 })

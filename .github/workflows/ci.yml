@@ -74,6 +74,10 @@ jobs:
           # fetch-depth and turbo falls back to "assume everything changed".
           # Setting the base explicitly is what actually makes --affected work.
           TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          # `budget` depends on `build`, and the build must succeed against an
+          # unreachable API here exactly as in the DoD 9 step below.
+          API_INTERNAL_URL: http://127.0.0.1:9
       - name: Build with an unreachable API URL (DoD 9)
         run: pnpm turbo run build --affected --output-logs=errors-only --env-mode=strict
         env:

@@ -29,6 +29,25 @@ describe('logical properties (foundation §7.2)', () => {
     expect(await lint('components/ui/fixture.tsx', jsx(className))).toEqual([])
   })
 
+  it.each([
+    'w-full',
+    'h-4',
+    'size-11',
+    'min-h-dvh',
+    'max-w-3xl',
+    'mt-4',
+    'py-2',
+    'top-0',
+    'inset-y-0',
+    'border-t',
+    'border-y',
+    'rounded-t-lg',
+    'space-y-4',
+    'md:mb-8',
+  ])('accepts the block-axis or dimension utility "%s" — it never mirrors', async (className) => {
+    expect(await lint('components/ui/fixture.tsx', jsx(className))).toEqual([])
+  })
+
   it.each(['ml-4', 'md:ml-4', '-ml-2', 'pl-2', 'border-l-2', 'left-0'])(
     'rejects the physical utility "%s"',
     async (className) => {

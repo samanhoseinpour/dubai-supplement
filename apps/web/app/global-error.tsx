@@ -10,10 +10,11 @@ import './globals.css'
 
 type GlobalErrorProps = {
   error: Error & { digest?: string }
-  reset: () => void
+  /** Next's retry: a router refresh, then the boundary reset — the only action that can recover from a Server Component error. */
+  retry: () => void
 }
 
-export default function GlobalError({ error, reset }: GlobalErrorProps) {
+export default function GlobalError({ error, retry }: GlobalErrorProps) {
   return (
     <html lang="fa" dir="rtl" className={vazirmatn.variable}>
       <body className="flex min-h-dvh flex-col">
@@ -24,7 +25,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             title={copy.errors.title}
             description={describeError(error)}
             action={
-              <Button variant="primary" onClick={reset}>
+              <Button variant="primary" onClick={retry}>
                 {copy.actions.retry}
               </Button>
             }

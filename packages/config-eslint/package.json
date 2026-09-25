@@ -6,10 +6,17 @@
   "exports": {
     "./base": "./base.js",
     "./nest": "./nest.js",
-    "./next": "./next.js"
+    "./next": {
+      "types": "./next.d.ts",
+      "default": "./next.js"
+    }
   },
   "dependencies": {
+    "eslint": "catalog:",
+    "eslint-config-next": "catalog:",
+    "eslint-plugin-better-tailwindcss": "catalog:",
     "eslint-plugin-boundaries": "catalog:",
+    "tailwindcss": "catalog:",
     "typescript-eslint": "catalog:"
   },
   "scripts": {

@@ -21,6 +21,11 @@ allowBuilds:
   cpu-features: false
   ssh2: false
   protobufjs: false
+  # eslint-config-next brings in eslint-import-resolver-typescript, whose native
+  # resolver checks for (and would otherwise download) its platform binary on
+  # install. The binary ships as an optional dependency, and the resolver itself
+  # is never used: @ds/config-eslint/next drops that setting.
+  unrs-resolver: false
 
 peerDependencyRules:
   allowedVersions:

@@ -42,6 +42,7 @@
     "eslint": "catalog:",
     "lefthook": "catalog:",
     "prettier": "catalog:",
+    "prettier-plugin-tailwindcss": "catalog:",
     "sherif": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:"

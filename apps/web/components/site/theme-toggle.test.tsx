@@ -49,4 +49,13 @@ describe('ThemeToggle', () => {
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
     expect(window.localStorage.getItem('ds-theme')).toBe('dark')
   })
+
+  it('lets «سیستم» replace an unknown stored value it is already shown for', async () => {
+    window.localStorage.setItem('ds-theme', 'blue')
+    renderToggle()
+    await userEvent.click(screen.getByRole('button', { name: 'انتخاب طرح' }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'سیستم' }))
+    expect(window.localStorage.getItem('ds-theme')).toBe('system')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+  })
 })

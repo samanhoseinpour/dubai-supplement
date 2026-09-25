@@ -1,7 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Button } from './button'
+
+// `Button` is a plain function: calling it returns the `<button>` element whose
+// props a Server Component would have to serialise.
+type ButtonElement = ReactElement<{ onClick?: unknown }>
 
 describe('Button', () => {
   it.each(['primary', 'secondary', 'ghost', 'destructive', 'link'] as const)(
@@ -70,5 +75,15 @@ describe('Button', () => {
   it('passes disabled through', () => {
     render(<Button disabled>ادامه</Button>)
     expect(screen.getByRole('button')).toBeDisabled()
+  })
+
+  it('renders a loading button without a handler as a plain element a Server Component can pass (no function props)', () => {
+    const element = Button({ loading: true, children: 'ادامه' }) as ButtonElement
+    expect(element.props.onClick).toBeUndefined()
+  })
+
+  it('still guards a loading submit button', () => {
+    const element = Button({ loading: true, type: 'submit', children: 'ثبت' }) as ButtonElement
+    expect(typeof element.props.onClick).toBe('function')
   })
 })

@@ -36,7 +36,10 @@ export const buttonVariants = cva(
 
 export type ButtonProps = ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
-    /** Keeps the label and the focus, swallows clicks, shows the spinner (spec §8.1). */
+    /**
+     * Keeps the label and the focus, swallows clicks, shows the spinner (spec §8.1).
+     * A loading `type="submit"` button is client-only, because the guard it needs is a function.
+     */
     loading?: boolean
     /** A leading icon; the spinner takes its place while loading. */
     icon?: ReactNode
@@ -67,7 +70,7 @@ export function Button({
       data-target=""
       data-variant={variant ?? 'secondary'}
       aria-busy={loading || undefined}
-      onClick={loading ? swallow : onClick}
+      onClick={loading && (onClick !== undefined || type === 'submit') ? swallow : onClick}
       className={cn(buttonVariants({ variant, size, block }), className)}
       {...props}
     >

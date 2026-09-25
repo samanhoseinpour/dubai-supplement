@@ -8,11 +8,12 @@ Router storefront (`apps/web`), in a pnpm + Turborepo monorepo.
 
 | Command                 | Does                                                |
 | ----------------------- | --------------------------------------------------- |
-| `pnpm dev`              | api on 3001 (web arrives in Phase 3)                |
+| `pnpm dev`              | api on 3001, web on 3000                            |
 | `pnpm db:up`            | Postgres, Redis, RustFS, Mailpit via compose        |
 | `pnpm db:migrate`       | apply SQL migrations                                |
 | `pnpm openapi:generate` | regenerate `openapi.json` and the typed client      |
 | `pnpm check`            | **the** verification command — end every task green |
+| `pnpm e2e`              | Playwright + axe against the production web build   |
 
 ## Non-negotiables
 
@@ -23,6 +24,9 @@ Router storefront (`apps/web`), in a pnpm + Turborepo monorepo.
 - **Logical Tailwind utilities only** — `ms- me- ps- pe- start- end-
 text-start`. Physical classes fail lint. The `rtl:` variant is for
   mirroring directional icons, not layout.
+- **Tokens only in `apps/web`.** No literal colour, size or duration; the
+  default palette is deleted and an unknown class fails lint. A primitive or
+  state not on `/design` does not exist.
 - **Money is IRR minor units.** `amountMinor bigint` plus `currency`. Never
   Toman in storage, never a float.
 - **Persian copy lives only in `apps/web`.** The API speaks English.
@@ -47,7 +51,7 @@ import `infrastructure/**`. `shared/**` and `src/infra/**` never import
 
 Conventional commits. Scopes: `api web contracts api-client persian config
 docs infra ci deps`. Trunk-based — short-lived `feat/*`, `fix/*`, `chore/*`,
-`docs/*`, squash-merged.
+`docs/*`, rebase-merged (ADR-0018).
 
 **Every commit is authored solely by Saman Hoseinpour.** No
 `Co-Authored-By`, no "Generated with" footer, no bot attribution. This is

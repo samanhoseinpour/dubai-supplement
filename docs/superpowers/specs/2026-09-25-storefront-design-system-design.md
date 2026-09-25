@@ -3,11 +3,11 @@
 |               |                                                                                                                                                                                                                                                                                                                                                                               |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Date**      | 2026-09-25 (brainstormed 2026-09-24/25; every section approved in conversation before it was written down)                                                                                                                                                                                                                                                                    |
-| **Status**    | Draft for Saman's review                                                                                                                                                                                                                                                                                                                                                      |
+| **Status**    | Approved by Saman Hoseinpour, 2026-09-25. Plan: [2026-09-25-storefront-design-system.md](../plans/2026-09-25-storefront-design-system.md)                                                                                                                                                                                                                                     |
 | **Owner**     | Saman Hoseinpour (solo developer, working with Claude Code)                                                                                                                                                                                                                                                                                                                   |
 | **Parent**    | [Foundation Design](./2026-08-27-foundation-design.md). Its §7 (storefront) is binding; this spec fills what §7 leaves undefined and amends it only where §13 says so                                                                                                                                                                                                         |
 | **Inputs**    | The two-colour palette chosen by Saman from `dyslove.design`'s "New Color Combos"; a typeface comparison rendered in the browser on 2026-09-24; [the apple-design skill](../../../.claude/skills/apple-design/SKILL.md); Vazirmatn v33.003 sources; shadcn 4.21.0 CLI source; package-registry checks on 2026-09-24 (Appendix A); the shadcnblocks.com license page (§2, D15) |
-| **Next step** | `docs/superpowers/plans/2026-09-25-storefront-design-system.md` via the writing-plans skill, after Saman approves this file                                                                                                                                                                                                                                                   |
+| **Next step** | Execute the plan on `feat/web-foundation`; one rebase-merge PR; then 3b                                                                                                                                                                                                                                                                                                       |
 
 ## 1. Purpose and scope
 
@@ -53,6 +53,8 @@ Repository mechanics that shape every task: `catalogMode: strict` with `minimumR
 
 `apps/web` is written by hand to §7.1. Then, once, `pnpm dlx shadcn@4.21.0 init --rtl -b base --pointer` (an _ask_ command, foundation §12.2). Verified against shadcn 4.21.0's `init.ts`: `--rtl` exists, `-b, --base <base>` exists with `base` as its default, and `--pointer` restores `cursor: pointer` on buttons — the e-commerce convention (§9, Jakob). The catalog is pre-seeded with everything the initializer installs **before** it runs, or `catalogMode: strict` refuses the install — the same trap Phase 2's Nest scaffold hit. After it runs, the generated oklch theme block is replaced by §5, and the generated components' `text-xs`/`text-sm`/`text-lg`, `rounded-*`, `shadow-*` and `ease-*` classes are remapped to §5–§6's scales — under §5.1's deletions those classes no longer exist, so one lint run after `init` lists every occurrence; `components.json` and `lib/utils.ts` (`cn`) stay. `tw-animate-css` is **not** installed: overlay motion comes from §7's own utilities, and its physically-named `slide-in-from-left-*` classes would fail §11's logical-properties rule anyway.
 
+**Amended 2026-09-25 (plan, deviation 1):** the initializer is not run; `components.json` and `lib/utils.ts` are written by hand to the values it would produce, because 4.21's base item installs `shadcn` at runtime, `tw-animate-css` and a Google-font item.
+
 ### 4.2 Layout (no `src/`, matching foundation §4.1 and shadcn's defaults)
 
 ```
@@ -97,7 +99,7 @@ This boundary **is** the design system. When an admin app exists, `components/ui
 
 ### 4.4 Rendering
 
-Cache Components static shell everywhere. `/`, `/design` and the error pages are fully static; `/health` is a route handler that awaits `connection()` (foundation §7.5); nothing in a layout or page reads `cookies()` or `headers()`. Server components by default. `'use client'` appears in exactly two places: the theme provider and toggle (§5.6), and primitives that wrap a Base UI component, which Base UI requires. Surface, Badge, Skeleton, Price and EmptyState are server components.
+Cache Components static shell everywhere. `/`, `/design` and the error pages are fully static; `/health` is a route handler that awaits `connection()` (foundation §7.5); nothing in a layout or page reads `cookies()` or `headers()`. Server components by default. `'use client'` appears only in the theme provider and toggle (§5.6), in primitives that wrap a Base UI component, which Base UI requires, and in `error.tsx` and `global-error.tsx`, which Next.js requires to be client components (amended 2026-09-25). Surface, Badge, Skeleton, Price and EmptyState are server components.
 
 ### 4.5 `/design`
 
@@ -329,6 +331,8 @@ Utilities defined with `@utility`: the `text-*` scale, `container-page`, `prose`
 
 `error.tsx`, `not-found.tsx` and `global-error.tsx` per foundation §7.6, composed from EmptyState and Button, with copy from `lib/copy.ts` and codes mapped by `lib/errors.ts`. `not-found.tsx` sets `<meta name="robots" content="noindex">`.
 
+**Known limit (2026-09-25):** Next 16 also emits a static `_global-error.html` — its own English "500: This page couldn’t load" — copied to `pages/500.html` because the app has no Pages Router; `next start` serves it only when an error escapes the page render entirely (App Router shell failures render our `global-error.tsx`). Overriding it means adding a Pages Router `pages/500.html`; deferred.
+
 ## 9. Accessibility and the UX laws as rules
 
 **Target: WCAG 2.2 AA** (D16). Playwright's axe run uses `withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])` — foundation §7.9's two tags cover WCAG 2.0 only and contain no target-size rule. Zero violations on every gallery section, both themes, both viewports. A skip link «پرش به محتوا» is first in the tab order; landmarks are `header`, `nav` (labelled), `main`, `footer`; one `h1` per page; every control is keyboard-operable with the visible ring; 200% text zoom loses nothing because every dimension is in rem.
@@ -372,6 +376,8 @@ Pixel snapshots are deliberately absent: baselines rendered on macOS fail on Lin
 
 `test/budget.test.ts` reads the production build's app manifest, gzips each route's chunk set and fails if any route's first-load JavaScript exceeds **130 KB** compressed, or the vendored font exceeds **120 KB**. Foundation §7.9's "enforced later" is enforced now. LCP and INP remain documented targets; a Lighthouse CI run on shared runners is too noisy to gate on and is out of scope (§15).
 
+**Amended 2026-09-25 (plan Task 10):** the 130 KB total is unmeetable on Next 16.3.6, because its shared root files, loaded by every route, gzip to 127.2 KB on their own (measured 2026-09-25). The gate is now the app's own first-load share — the client chunks of every segment a route renders, beyond those root files — at **≤ 100 KB** gzipped per route; the root files are held to **≤ 140 KB** as a floor guard for framework upgrades; the font stays ≤ 120 KB; each route's total is reported, not gated. Baseline: `/design` 81.1 KB app of 208.3 KB total; `/` 75.1 KB app of 202.3 KB. About 51 KB of the app share, on every route under the root layout, is one chunk — the theme toggle's Base UI Menu with floating-ui, plus next-themes — kept deliberately as the design system's shared menu machinery: the toggle is the first portal component (§8.1), and every later menu, popover and select reuses it.
+
 ## 11. Tooling and lint enforcement
 
 `@ds/config-eslint/next` is rebuilt as three layers on the existing strict TypeScript base:
@@ -387,7 +393,7 @@ Pixel snapshots are deliberately absent: baselines rendered on macOS fail on Lin
 
 Flat-config note carried from Phase 2: a later object that sets `no-restricted-syntax` or `no-restricted-imports` **replaces** the earlier options. Every selector and path for web lives in one object.
 
-`apps/web/eslint.config.js` imports the config and adds nothing. Lint runs as `eslint .`, never `next lint` (foundation §12.1).
+`apps/web/eslint.config.js` imports the config and adds only ignores and path anchors — an absolute `better-tailwindcss.entryPoint` and `cwd`, `boundaries/root-path`, `next.rootDir` — so the rules fire the same way from any working directory (amended 2026-09-25: ESLint 10 finds the config from the linted file but resolves relative settings against its cwd). Lint runs as `eslint .`, never `next lint` (foundation §12.1).
 
 ## 12. CI
 
@@ -426,7 +432,7 @@ Amendments to the [foundation spec](./2026-08-27-foundation-design.md), each dat
 5. `pnpm --filter web build` succeeds with `API_INTERNAL_URL=http://127.0.0.1:9`.
 6. Lint fails — each proven by the regression suite — on: a physical utility, including one behind a variant prefix; an unknown class (`bg-blue-500`); an arbitrary colour; `tracking-*`; a route segment config export; `lucide-react` imported outside `lib/icons.ts`.
 7. `test/tokens.test.ts` fails when a semantic hex is moved by one step or a pair drops below its threshold — proven once by mutation and recorded in the task report.
-8. Every interactive element on `/design` is ≥ 44 × 44; axe reports zero violations at the §9 tags; the font is ≤ 120 KB; every route is ≤ 130 KB.
+8. Every interactive element on `/design` is ≥ 44 × 44; axe reports zero violations at the §9 tags; the font is ≤ 120 KB; every route's app share is ≤ 100 KB gzipped and the framework floor ≤ 140 KB (amended 2026-09-25).
 9. §13's documents exist; `pnpm check:docs` passes; `apps/web/CLAUDE.md` is ≤ 60 lines.
 10. `pnpm audit:authors` passes; one rebase-merge PR, `feat/web-foundation` → `main`.
 

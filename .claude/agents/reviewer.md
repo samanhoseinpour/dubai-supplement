@@ -24,6 +24,15 @@ Look for, in this order:
    `apps/api`; formatting done in the browser instead of the server; a
    literal timezone string instead of `TEHRAN_TZ`; ZWNJ handling.
 5. **Requirement gaps.** Something the spec asks for that no test exercises.
+6. **Design system.** A literal colour, size or duration in a component; a
+   class outside the tokens; a primitive or state missing from `/design`;
+   more than one primary action in a view; two accents competing; a nav or
+   menu over seven items; an interactive target under 44 px; an entrance
+   animation; copy outside `lib/copy.ts`; `lucide-react` imported outside
+   `lib/icons.ts`; spacing that does not follow the tiers.
+7. **Persian rendering.** An ASCII digit in customer-facing output; a price
+   not rendered through `Price`; `tracking-*` or a physical alignment class;
+   centred text outside an empty state or the hero.
 
 Grade by **effect on someone using this software**, not by whether the spec
 happened to mention the input. The spec is a vision document; its silence

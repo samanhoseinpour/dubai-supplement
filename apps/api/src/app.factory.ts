@@ -17,6 +17,14 @@ import { buildDocument } from './shared/openapi/index.js'
 export const BODY_LIMIT_BYTES = 1_048_576
 
 /**
+ * The longest path parameter Fastify's router hands on to Nest, in place of
+ * find-my-way's default of 100 — why, on the `routerOptions` line of
+ * `adapterOptions`. A parameter longer than this is still refused by the
+ * router with a bare 414.
+ */
+export const MAX_PARAM_LENGTH = 8192
+
+/**
  * The slice of the adapter's options this API fixes, typed structurally: the
  * api depends on `@nestjs/platform-fastify`, not on `fastify` itself, so its
  * option types are not importable here — the same reason `problem.filter.ts`
@@ -26,6 +34,7 @@ interface AdapterOptions {
   logger: false
   trustProxy: string
   bodyLimit: number
+  routerOptions: { maxParamLength: number }
 }
 
 /**
@@ -57,6 +66,14 @@ export function adapterOptions(config: AppConfig): AdapterOptions {
     // refuses everything else, so what arrives here is one of those.
     trustProxy: config.trustProxy,
     bodyLimit: BODY_LIMIT_BYTES,
+    // A malformed path parameter must be a 400 problem naming it, which
+    // needs it to reach the validation pipe. find-my-way refuses one longer
+    // than `maxParamLength` inside the router instead, where Fastify writes a
+    // bare `414 application/json` before Nest's pipe or ProblemFilter runs.
+    // Its default of 100 protects nothing here — Node's HTTP parser already
+    // bounds the request line — and would only bypass ProblemFilter for any
+    // slug past 100 characters (catalog-http.test.ts sends 101).
+    routerOptions: { maxParamLength: MAX_PARAM_LENGTH },
   }
 }
 

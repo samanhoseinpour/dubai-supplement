@@ -1,7 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { ProblemDetailsSchema } from '@ds/contracts'
-import { adapterOptions, BODY_LIMIT_BYTES, createApp } from '../../src/app.factory.js'
+import {
+  adapterOptions,
+  BODY_LIMIT_BYTES,
+  createApp,
+  MAX_PARAM_LENGTH,
+} from '../../src/app.factory.js'
 import { AppConfig, validatedEnv } from '../../src/infra/config/index.js'
 
 /**
@@ -105,8 +110,10 @@ describe('createApp', () => {
         logger: false,
         trustProxy: 'loopback,uniquelocal',
         bodyLimit: BODY_LIMIT_BYTES,
+        routerOptions: { maxParamLength: MAX_PARAM_LENGTH },
       })
       expect(BODY_LIMIT_BYTES).toBe(1_048_576)
+      expect(MAX_PARAM_LENGTH).toBe(8192)
     })
 
     it('keeps the raw body, and refuses one over the limit as a problem', async () => {

@@ -56,6 +56,7 @@ Five failure modes the spec implies but no happy path exercises. Each has a test
 9. **`BrandService.findBySlug` exists beside `getBySlug`.** The seed needs "does it exist" as `null`, the controller needs the 404; one throwing method would force the seed to catch a `NotFoundError` as control flow.
 10. **Schemas carry `.meta({ id })`** (`Brand`, `BrandListResponse`) so the document and the generated client can name them. If `@nestjs/swagger` renders them as JSON-Schema `$defs` instead of `components.schemas` (checked in Task 7, Step 8), the ids are removed and the task report says so — nothing else depends on them.
 11. **The seed is the store's nine real brands**, read from the labels in Saman's four shelf photographs of 2026-09-25 (his instruction: the photographs never ship), not foundation §5.7's six examples — which stay as test data in every suite of Tasks 1–7. Every spelling but «بلک اسکال» (his) is a transliteration he corrects in `seed-brands.ts`: data, not a migration. Task 8 amends foundation §5.7, §7.9 and §14 in its commit; the 3c spec's D29 records what follows for the storefront.
+12. **The generated client schema is `src/generated/schema.ts`, not `schema.d.ts`** (ruled during Task 6): `tsc` does not emit `.d.ts` inputs, so the built package lost its path types. Every later mention of `schema.d.ts` in this plan means `schema.ts`.
 
 ---
 

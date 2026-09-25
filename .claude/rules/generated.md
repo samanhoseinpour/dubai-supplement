@@ -16,5 +16,5 @@ pnpm openapi:generate
 ```
 
 That boots the API without listening, writes `apps/api/openapi.json`, and
-regenerates `packages/api-client/src/generated/schema.d.ts` from it. The CI
+regenerates `packages/api-client/src/generated/schema.ts` from it. The CI
 `openapi` job runs the same command and fails if `git diff` is non-empty.

@@ -7,7 +7,7 @@ are cheap now and expensive later.
 Trigger the deploy with `deploy.yml` via `workflow_dispatch` — not by
 pushing, because the `deploy` job stays skipped until step 7.
 
-## 1. ICU collation — before the first migration
+## 1. ICU collation and character type — before the first migration
 
 `brands.name` is ordered with `COLLATE "fa"`, which needs an ICU-enabled
 PostgreSQL build. Liara's is unverified.
@@ -23,6 +23,39 @@ SELECT count(*) FROM pg_collation WHERE collprovider = 'i';
 
 Run this **before** the first migration. Afterwards it is a migration to
 undo rather than a line to change.
+
+In the same session, check the database's character-type locale:
+
+```sql
+SELECT datctype FROM pg_database WHERE datname = current_database();
+```
+
+- **Anything but `C` or `POSIX`** — a UTF-8 locale such as `en_US.utf8`:
+  continue.
+- **`C` or `POSIX`:** do **not** run the migration. Get a database created
+  with a UTF-8 `LC_CTYPE` first, while this one is still empty.
+
+PostgreSQL 16's `pg_trgm` extracts no trigrams from Persian text when
+`LC_CTYPE` is `C` (its `t_isalnum` falls back to byte-wise `isalnum`), so
+`brands_search_text_idx` would be useless for Persian search, and `datctype`
+is fixed when the database is created — fixing it later means recreating the
+database.
+
+**Then the first migration, and the seed.** With both checks passed, the
+first deploy migrates: `ds-api`'s entrypoint runs `node dist/migrate.js`
+before it starts the server (§3). Once that deploy is up, run the seed
+once, in the `ds-api` container:
+
+```sh
+node dist/seed.js
+```
+
+It is the entrypoint `pnpm db:seed` runs locally. It writes the store's nine
+brands through `BrandService`, each with its `catalog.brand.created` outbox
+event, and it is idempotent by slug, so re-running it is safe. Expected: its
+`seed finished` line lists nine slugs under `created` — a re-run lists them
+under `skipped` and writes nothing. The events wait in `outbox_events` until
+`ds-api`'s relay (§4) delivers them, one `brand created` line each.
 
 ## 2. Trusted proxy hops
 

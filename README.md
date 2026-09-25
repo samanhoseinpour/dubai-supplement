@@ -8,9 +8,10 @@ fitness supplements.
 > exist — configuration, migrations, health probes, the transactional outbox,
 > Redis and object storage on the API side; the shell, a design system of
 > two brand colours plus signal tokens, a single light theme, the `/design`
-> gallery and the Playwright + axe suite on the web side. No product feature
-> does: the catalogue's Brand slice (3b) is built; the brand pages arrive with 3c. The
-> table below is the chosen stack, not a list of what is built.
+> gallery and the Playwright + axe suite on the web side. The first product
+> feature, the catalogue's Brand slice (3b), is built through the API; the
+> brand pages arrive with 3c. The table below is the chosen stack, not a list
+> of what is built.
 
 ## Stack
 

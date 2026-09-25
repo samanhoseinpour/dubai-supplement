@@ -25,10 +25,19 @@ modules/<context>/
 
 Then:
 
-1. Add the context to the table in `docs/architecture/north-star.md`.
-2. Add its terms to `docs/glossary.md`.
-3. Register the module in `app.module.ts`.
-4. Run `pnpm lint typecheck boundaries test` — `boundaries` is what catches a
+1. Take out what is catalog's alone. Drop the copied
+   `application/seed-brands.ts`, its `index.ts` export and any call to it in
+   `src/seed.ts`, unless the new context needs a seed. Rename the copied
+   `@OnDomainEvent` subscription and its handler (`BrandCreatedLogger` on
+   `catalog.brand.created`) — left as they are, they subscribe a second
+   handler to catalog's event.
+2. Add the context to the table in `docs/architecture/north-star.md`.
+3. Add its terms to `docs/glossary.md`.
+4. Register the module in `app.module.ts`, then run `pnpm openapi:generate`
+   and commit the regenerated `apps/api/openapi.json` and
+   `packages/api-client/src/generated/schema.ts`. The freshness test is
+   integration-only, so a unit-only run never catches the drift.
+5. Run `pnpm lint typecheck boundaries test` — `boundaries` is what catches a
    layering mistake, and it is the reason the anatomy is not negotiable.
 
 The skill copies colocated unit tests but writes **no** migration and **no**

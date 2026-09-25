@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { contrast, hexToRgb, mix, toHex, type Rgb } from './helpers/color'
+import { contrast, hexToRgb, mix, oklchToHex, toHex, type Rgb } from './helpers/color'
 
 const css = readFileSync(fileURLToPath(new URL('../app/globals.css', import.meta.url)), 'utf8')
 
@@ -65,6 +65,20 @@ describe('primitives', () => {
 
   it('never use oklch (the shadcn theme was replaced)', () => {
     expect(css).not.toMatch(/oklch\(/)
+  })
+})
+
+// Tailwind 4's published palette, as OKLCH and as the hex it ships. Three of
+// the four lie slightly outside sRGB; reproducing them exactly is what proves
+// the helper clamps the way Tailwind encodes.
+describe('oklchToHex', () => {
+  it.each<[number, number, number, string]>([
+    [0.577, 0.245, 27.325, '#e7000b'],
+    [0.546, 0.245, 262.881, '#155dfc'],
+    [0.627, 0.194, 149.214, '#00a63e'],
+    [0.666, 0.179, 58.318, '#e17100'],
+  ])('oklch(%s %s %s) is %s', (L, C, h, hex) => {
+    expect(oklchToHex(L, C, h)).toBe(hex)
   })
 })
 

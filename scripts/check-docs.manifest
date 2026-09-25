@@ -56,4 +56,6 @@ packages/config-eslint/base.js
 packages/config-eslint/esm-ts-resolver.js
 packages/config-eslint/nest.js
 packages/config-eslint/next.js
-packages/config-eslint/rtl.js
+packages/config-eslint/next.d.ts
+packages/config-eslint/web-alias-resolver.js
+apps/web/eslint.config.js

@@ -2694,7 +2694,7 @@ import { cn } from '@/lib/utils'
 // needed — which also keeps the gallery's forced panels honest (Task 9).
 // Sizes start at 44 px — nothing smaller exists (§9, Fitts).
 export const buttonVariants = cva(
-  'press focus-ring relative inline-flex items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap select-none disabled:pointer-events-none disabled:opacity-50 aria-busy:pointer-events-none',
+  'relative inline-flex press items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap focus-ring select-none disabled:pointer-events-none disabled:opacity-50 aria-busy:pointer-events-none',
   {
     variants: {
       variant: {
@@ -2790,7 +2790,7 @@ import { cn } from '@/lib/utils'
 // so it is distinguishable without colour. `plain` is for links that look like
 // something else: a button (`buttonVariants`), a whole card (`surfaceVariants`),
 // the wordmark.
-export const linkVariants = cva('focus-ring rounded-sm', {
+export const linkVariants = cva('rounded-sm focus-ring', {
   variants: {
     variant: {
       text: 'text-foreground underline decoration-1 underline-offset-3 transition-colors duration-(--duration-quick) ease-out hover:text-muted-foreground',
@@ -2823,7 +2823,7 @@ export const surfaceVariants = cva('rounded-lg text-card-foreground', {
       raised:
         'bg-card shadow-sm transition-shadow duration-(--duration-quick) ease-out hover:shadow-md',
       material: 'material text-foreground',
-      pressable: 'press focus-ring block border bg-card hover:bg-accent',
+      pressable: 'block press border bg-card focus-ring hover:bg-accent',
     },
   },
   defaultVariants: { variant: 'default' },
@@ -2984,7 +2984,7 @@ export function EmptyState({
         </div>
       ) : null}
       <Heading className="text-title font-bold">{title}</Heading>
-      {description ? <p className="prose text-body text-muted-foreground">{description}</p> : null}
+      {description ? <p className="text-body text-muted-foreground prose">{description}</p> : null}
       {action}
     </div>
   )
@@ -3184,7 +3184,7 @@ export function TextField({ label, hint, error, className, disabled, ...control 
       <Field.Label className="text-small font-medium text-foreground">{label}</Field.Label>
       <Field.Control
         data-target=""
-        className="focus-ring min-h-12 rounded-md border border-input bg-card px-3 text-body text-foreground transition-colors duration-(--duration-quick) ease-out placeholder:text-muted-foreground data-disabled:opacity-50 data-invalid:border-destructive"
+        className="min-h-12 rounded-md border border-input bg-card px-3 text-body text-foreground focus-ring transition-colors duration-(--duration-quick) ease-out placeholder:text-muted-foreground data-disabled:opacity-50 data-invalid:border-destructive"
         {...control}
       />
       {hint ? (
@@ -3281,7 +3281,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner side="bottom" align="end" sideOffset={8} className="z-overlay">
-          <Menu.Popup className="popup min-w-40 rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+          <Menu.Popup className="min-w-40 popup rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none">
             <Menu.RadioGroup
               value={current}
               onValueChange={(value) => {
@@ -3573,7 +3573,7 @@ import { Wordmark } from './wordmark'
 // the not-found page, and nothing is deployed before Phase 4.
 export function Header() {
   return (
-    <header className="material sticky top-0 z-header">
+    <header className="sticky top-0 z-header material">
       <div className="container-page flex min-h-16 items-center justify-between gap-4">
         <Wordmark />
         <nav aria-label={copy.nav.primary} className="flex items-center gap-2">
@@ -3689,8 +3689,8 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <section className="flex flex-col items-start gap-6 py-8">
-      <h1 className="prose text-display font-extrabold">{copy.home.headline}</h1>
-      <p className="prose text-lead text-muted-foreground">{copy.home.lead}</p>
+      <h1 className="text-display font-extrabold prose">{copy.home.headline}</h1>
+      <p className="text-lead text-muted-foreground prose">{copy.home.lead}</p>
       <Link
         variant="plain"
         href="/brands"
@@ -3965,7 +3965,7 @@ export default function DesignPage() {
     <div className="flex flex-col gap-12">
       <div className="flex flex-col gap-2">
         <h1 className="text-headline font-bold">{copy.design.title}</h1>
-        <p className="prose text-body text-muted-foreground">{copy.design.intro}</p>
+        <p className="text-body text-muted-foreground prose">{copy.design.intro}</p>
       </div>
       {SECTIONS.map(({ id, title, Section }) => (
         <section key={id} id={id} aria-labelledby={`${id}-title`} className="flex flex-col gap-4">
@@ -4068,7 +4068,7 @@ export function TypographySection() {
           <p className={className}>{copy.design.samples.heading}</p>
         </div>
       ))}
-      <p className="prose text-body">{copy.design.samples.paragraph}</p>
+      <p className="text-body prose">{copy.design.samples.paragraph}</p>
       <p className="text-body">{copy.design.samples.brandSentence}</p>
       <p className="text-title font-bold tabular-nums">{formatToman(28_500_000n)}</p>
     </div>
@@ -4138,7 +4138,7 @@ import { copy } from '@/lib/copy'
 export function LinksSection() {
   return (
     <div className="flex flex-col gap-4">
-      <p className="prose text-body">
+      <p className="text-body prose">
         {copy.design.samples.linkSentence}{' '}
         <Link href="/design#links">{copy.design.samples.link}</Link>
       </p>

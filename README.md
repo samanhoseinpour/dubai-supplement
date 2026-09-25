@@ -6,24 +6,24 @@ fitness supplements.
 > **Status: foundation.** The repository, toolchain, quality gates,
 > documentation system, the API's foundation and the storefront's foundation
 > exist — configuration, migrations, health probes, the transactional outbox,
-> Redis and object storage on the API side; the shell, the two-colour design
-> system, light and dark themes, the `/design` gallery and the Playwright +
-> axe suite on the web side. No product feature does: the catalogue arrives
-> with Phase 3b and the brand pages with 3c. The table below is the chosen
-> stack, not a list of what is built.
+> Redis and object storage on the API side; the shell, a design system of
+> two brand colours plus signal tokens, a single light theme, the `/design`
+> gallery and the Playwright + axe suite on the web side. No product feature
+> does: the catalogue arrives with Phase 3b and the brand pages with 3c. The
+> table below is the chosen stack, not a list of what is built.
 
 ## Stack
 
-| Layer      | Choice                                                                                   |
-| ---------- | ---------------------------------------------------------------------------------------- |
-| API        | NestJS 12 (ESM) on the Fastify adapter                                                   |
-| Storefront | Next.js 16 App Router, React 19, Cache Components                                        |
-| Contracts  | Zod 4 → OpenAPI → a typed `openapi-fetch` client                                         |
-| Data       | PostgreSQL 16 with Drizzle ORM; Redis 7.2                                                |
-| UI         | Tailwind CSS 4 — two-colour tokens, logical utilities only; shadcn on Base UI; Vazirmatn |
-| Monorepo   | pnpm 12 workspaces, Turborepo                                                            |
-| Testing    | Vitest 5, Testcontainers, Playwright with axe                                            |
-| Language   | TypeScript 6.0.3 throughout                                                              |
+| Layer      | Choice                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------- |
+| API        | NestJS 12 (ESM) on the Fastify adapter                                                         |
+| Storefront | Next.js 16 App Router, React 19, Cache Components                                              |
+| Contracts  | Zod 4 → OpenAPI → a typed `openapi-fetch` client                                               |
+| Data       | PostgreSQL 16 with Drizzle ORM; Redis 7.2                                                      |
+| UI         | Tailwind CSS 4 — two-brand-colour tokens, logical utilities only; shadcn on Base UI; Vazirmatn |
+| Monorepo   | pnpm 12 workspaces, Turborepo                                                                  |
+| Testing    | Vitest 5, Testcontainers, Playwright with axe                                                  |
+| Language   | TypeScript 6.0.3 throughout                                                                    |
 
 ## Prerequisites
 

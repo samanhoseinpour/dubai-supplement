@@ -1,6 +1,6 @@
 # 0019. Two-colour design tokens with enforced semantics
 
-- Status: accepted
+- Status: superseded by [0020](0020-lapis-and-the-ink-as-primary.md)
 - Date: 2026-09-25
 
 ## Context and Problem Statement
@@ -15,7 +15,7 @@ The storefront needs its colour system before any product page exists, so every 
 
 ## Decision Outcome
 
-Chosen: **two colours with derived neutrals under shadcn's semantic names**, because it is the only option where the palette is a fact rather than a convention. Every neutral is one colour mixed over the other, or over paper or white, at a recorded percentage; `apps/web/test/tokens.test.ts` re-derives each from the two primitives and fails when a committed hex drifts, then checks every text pair at ≥ 4.5:1 and the control boundary at ≥ 3:1 in both themes. `--color-*: initial` in `app/globals.css` deletes Tailwind's palette, so `bg-blue-500` is an unknown class and `eslint-plugin-better-tailwindcss` fails the build on it; the same deletion applies to the default type, radius, shadow, easing and weight scales. shadcn's semantic colour names are kept, so a generated component's colour classes resolve unchanged; its type, shadow, radius, z-index and motion classes are mapped to this system when the component is added, and lint rejects them until then. Light is the default; dark inverts the ink and keeps the primary fill.
+Chosen: **two colours with derived neutrals under shadcn's semantic names**, because it is the only option where the palette is a fact rather than a convention. Every neutral is one colour mixed over the other, or over paper or white, at a recorded percentage; `apps/web/test/tokens.test.ts` re-derives each from the two primitives and fails when a committed hex drifts, then checks every text pair at ≥ 4.5:1 and the control boundary at ≥ 3:1 in both themes. `--color-*: initial` in `app/globals.css` deletes Tailwind's palette, so `bg-blue-500` is an unknown class and `eslint-plugin-better-tailwindcss` fails the build on it; the same deletion applies to the default type, radius, shadow, easing and weight scales. shadcn's semantic colour names are kept, so a generated component's colour classes resolve unchanged; its type, shadow, radius, z-index and motion classes are mapped to this system when the component is added, and lint rejects them until then. Light is the default; dark inverts the ink and keeps the primary fill. **Superseded 2026-09-25 by ADR-0020:** Frozen leaves the system and the primary is the ink; the mechanism — derived tokens under shadcn's names, the deleted palette, the tokens test — carries forward unchanged.
 
 ### Consequences
 

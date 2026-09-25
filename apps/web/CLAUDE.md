@@ -1,8 +1,8 @@
 # apps/web — the storefront
 
 Next.js 16 App Router on Cache Components, React 19, Tailwind 4, shadcn on
-Base UI, Vazirmatn. Persian, right-to-left, two colours. The design system
-is `app/globals.css` plus `components/ui`; its spec is
+Base UI, Vazirmatn. Persian, RTL, two brand colours, three signal colours,
+one light theme. Design system: `app/globals.css` plus `components/ui`; spec
 `docs/superpowers/specs/2026-09-25-storefront-design-system-design.md`.
 
 ## Commands (from the repository root)
@@ -23,7 +23,7 @@ is `app/globals.css` plus `components/ui`; its spec is
   `health/`, `robots.ts`, the three error files, `design/` (the gallery).
 - `components/ui/` — the primitives: Button, Link, Surface, Badge, Skeleton,
   Price, EmptyState, TextField. `components/site/` — Header, Footer,
-  Wordmark, ThemeToggle, Providers.
+  Wordmark, Providers.
 - `lib/` — `copy.ts` (every Persian string), `icons.ts` (semantic names),
   `errors.ts`, `motion.ts`, `env.ts` (`getServerEnv()`, lazy), `site.ts`,
   `utils.ts` (`cn`, taught the deleted scales).
@@ -43,7 +43,7 @@ makes the import unresolvable, and a relative path into it fails lint.
   `bg-(--x)`.
 - A physical inline-axis utility, even behind a variant (`md:ml-4`); the
   block axis and sizes (`mt-`, `top-`, `w-`, `h-`) never mirror and pass.
-- `tracking-*`; `leading-none|tight`; `text-left|right|justify`; numeric `z-*`.
+- `tracking-*`; `leading-none|tight`; `text-left|right|justify`; `z-<n>`; `dark:`.
 - `export const dynamic | revalidate | fetchCache | runtime | dynamicParams`.
 - `lucide-react` outside `lib/icons.ts`; `next/font/google` anywhere.
 - A token whose text pair drops below 4.5:1, or `--input` below 3:1.
@@ -53,7 +53,7 @@ makes the import unresolvable, and a relative path into it fails lint.
 
 ## What a reviewer checks
 
-One primary action per view; one accent; ≤ 7 nav items; spacing tiers
-(2–4 inside a component, 6–8 between groups, 12–16 between sections);
-Persian digits everywhere; no entrance animation; every new primitive and
-state on `/design`.
+One primary action per view; one attention colour (the sale chip); ≤ 7 nav
+items; spacing tiers (2–4 inside a component, 6–8 between groups, 12–16
+between sections); Persian digits everywhere; no entrance animation; every
+new primitive and state on `/design`.

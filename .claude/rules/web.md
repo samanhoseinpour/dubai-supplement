@@ -36,9 +36,15 @@ io()` before any uncached work inside a page island. `connection` comes
   and the physical corners fail; block-axis and dimension utilities
   (`mt- pt- py- top- bottom- border-t|b- w- h- size-`) are allowed, because
   they never mirror between LTR and RTL.
-- **Two colours, light by default.** Black Iris and Frozen; dark inverts the
-  ink, never the primary fill. Frozen is a surface, never an ink on a light
-  page. `test/tokens.test.ts` guards every pair; change a token, run it.
+- **Two brand colours, three signal colours, one light theme.** Black Iris
+  is the ink and the primary fill. Lapis is an ink and a surface: links, the
+  focus ring, the tonal secondary button and its hover, the selection
+  highlight — never a fill under white text. `destructive` (which `sale`
+  equals on purpose), `success` and `warning` each have an ink, a
+  `-foreground` for solid fills and a `-soft` surface; every chromatic ink is
+  an OKLCH triple re-derived in `test/tokens.test.ts`, never a class. There
+  is no dark theme (ADR-0021): no `dark:` variant, no theme attribute, no
+  toggle.
 - **The type scale only.** `text-caption … text-display`, each carrying its
   own leading. `tracking-*`, `leading-none`, `leading-tight` and
   `text-left|right|justify` fail lint. Inputs are never under 16 px.
@@ -53,22 +59,20 @@ io()` before any uncached work inside a page island. `connection` comes
   `--ease-out|in`; press feedback on pointer-down; hover only on hover
   devices; focus rings instant. No entrance choreography, ever. Reduced
   motion, reduced transparency and `prefers-contrast: more` are honoured in
-  `globals.css`, not per component — the one JavaScript check is the theme
-  toggle's `prefersReducedMotion()`, because a media query cannot gate
-  `startViewTransition`. Springs come from `lib/motion.ts`;
+  `globals.css`, not per component. Springs come from `lib/motion.ts`;
   `motion` is installed by the first gesture surface, loaded through
   `LazyMotion` with `domAnimation` and `m`. When that surface arrives:
   momentum projection is `((v / 1000) * rate) / (1 - rate)` with
   `rate = 0.998`, and rubber-banding is
   `(d * dimension * 0.55) / (dimension + 0.55 * |d|)` (apple-design §6, §9).
 - **Targets ≥ 44 × 44 px, marked `data-target`.** Exactly one primary action
-  per view; ≤ 7 items in a nav or menu; one accent per view — the primary
-  button or the inverted badge, never both competing.
+  per view; ≤ 7 items in a nav or menu; one attention colour per view — the
+  sale chip; the primary is the ink, not an accent; the inverted chip and the
+  sale chip never share a card.
 - **A primitive or state not on `/design` does not exist.** Adding one means
-  adding it to the gallery in every state, in both panels.
-- **Static shell.** No `cookies()` or `headers()` in a layout; the theme is
-  `next-themes`' pre-paint script. `'use client'` only in Base UI wrappers,
-  the theme provider and toggle, and Next's own error boundaries.
+  adding it to the gallery in every state.
+- **Static shell.** No `cookies()` or `headers()` in a layout. `'use client'`
+  only in Base UI wrappers and Next's own error boundaries.
 - **Error boundaries call Next's `retry`, never `reset`** — only `retry`
   recovers from a Server Component error.
 - **Browser floor: Tailwind 4.3** — Safari 16.4+, Chrome 111+. Do not lower

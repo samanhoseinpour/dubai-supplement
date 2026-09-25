@@ -10,6 +10,7 @@ import { LoggerModule } from './infra/logger/index.js'
 import { OutboxModule } from './infra/outbox/index.js'
 import { REDIS, RedisModule } from './infra/redis/index.js'
 import { StorageModule } from './infra/storage/index.js'
+import { CatalogModule } from './modules/catalog/index.js'
 
 // Config, logging, the data layer, the outbox relay, Redis, object storage,
 // the global throttler and health. Validation, the problem filter and the
@@ -48,6 +49,9 @@ import { StorageModule } from './infra/storage/index.js'
       useFactory: (redis: Redis) => buildThrottlerOptions(redis),
     }),
     HealthModule,
+    // The first bounded context (§5.7). Its repository holds the pool's
+    // token and opens nothing at boot, so src/openapi.ts still boots dry.
+    CatalogModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

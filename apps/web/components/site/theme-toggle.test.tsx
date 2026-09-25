@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from 'next-themes'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import { ThemeToggle } from './theme-toggle'
 
 function renderToggle() {
@@ -12,7 +12,21 @@ function renderToggle() {
   )
 }
 
+const SCRIPT_WARNING = 'Encountered a script tag while rendering React component'
+let consoleError: MockInstance<typeof console.error>
+
+beforeEach(() => {
+  // next-themes' pre-paint <script> is server-rendered in the app; under a
+  // client render React 19 warns about it once per file. Swallow exactly that
+  // line and fail on anything else, so the log stays a guard.
+  consoleError = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+    if (typeof args[0] === 'string' && args[0].includes(SCRIPT_WARNING)) return
+    throw new Error(`unexpected console.error: ${args.map(String).join(' ')}`)
+  })
+})
+
 afterEach(() => {
+  consoleError.mockRestore()
   window.localStorage.clear()
   document.documentElement.removeAttribute('data-theme')
 })

@@ -60,4 +60,37 @@ describe('createApiClient', () => {
     await api.GET('/health/live')
     expect(calls[0]?.headers.get('x-request-id')).toBe('abc')
   })
+
+  it('substitutes a path parameter and returns a typed brand', async () => {
+    const brand = {
+      id: '0199f3c0-1111-7000-8000-000000000000',
+      slug: 'muscletech',
+      name: 'ماسل‌تک',
+      createdAt: '2026-09-25T12:00:00.000Z',
+      updatedAt: '2026-09-25T12:00:00.000Z',
+    }
+    const { fetch, calls } = fakeFetch(200, brand)
+    const api = createApiClient({ baseUrl: BASE, fetch })
+    const { data } = await api.GET('/catalog/brands/{slug}', {
+      params: { path: { slug: 'muscletech' } },
+    })
+    expect(data?.name).toBe('ماسل‌تک')
+    expect(calls[0]?.url).toBe('http://api.internal:3001/catalog/brands/muscletech')
+  })
+
+  it('turns the catalog 404 into an ApiError the storefront can branch on', async () => {
+    const problem = {
+      type: 'urn:problem:CATALOG_BRAND_NOT_FOUND',
+      title: 'Brand Not Found',
+      status: 404,
+      instance: 'req-2',
+      code: 'CATALOG_BRAND_NOT_FOUND',
+      detail: 'No brand has the slug "nope"',
+    }
+    const { fetch } = fakeFetch(404, problem, 'application/problem+json')
+    const api = createApiClient({ baseUrl: BASE, fetch })
+    await expect(
+      api.GET('/catalog/brands/{slug}', { params: { path: { slug: 'nope' } } }),
+    ).rejects.toMatchObject({ code: 'CATALOG_BRAND_NOT_FOUND', status: 404 })
+  })
 })

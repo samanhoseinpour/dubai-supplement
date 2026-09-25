@@ -18,6 +18,8 @@ describe('errorMessage', () => {
   it('falls back for an unknown or empty code', () => {
     expect(errorMessage('SOMETHING_NEW')).toBe(FALLBACK_MESSAGE)
     expect(errorMessage('')).toBe(FALLBACK_MESSAGE)
+    expect(errorMessage('constructor')).toBe(FALLBACK_MESSAGE)
+    expect(errorMessage('__proto__')).toBe(FALLBACK_MESSAGE)
     expect(FALLBACK_MESSAGE).not.toMatch(/[A-Za-z0-9]/)
   })
 })

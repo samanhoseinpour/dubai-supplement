@@ -199,9 +199,15 @@
 
 /* ---------- 4. Base ---------- */
 
+/* Hand-written rules read the raw per-theme tokens (`--border`, never
+   `--color-border`). An alias from `@theme inline` is an unregistered custom
+   property, so its `var()` resolves once, on the element that declares it —
+   `:root` — and a forced `[data-theme]` panel (the gallery) would inherit the
+   page theme through it. Utilities are unaffected: `@theme inline` compiles
+   them to the raw variable. */
 @layer base {
   * {
-    border-color: var(--color-border);
+    border-color: var(--border);
   }
 
   html {
@@ -216,8 +222,8 @@
 
   body {
     min-block-size: 100dvh;
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--background);
+    color: var(--foreground);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
   }
@@ -230,13 +236,13 @@
 
   /* §7.1 — instant, 2 px, 2 px outside the control so it sits on the page. */
   :focus-visible {
-    outline: 2px solid var(--color-ring);
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 
   ::selection {
-    background-color: var(--color-primary);
-    color: var(--color-primary-foreground);
+    background-color: var(--primary);
+    color: var(--primary-foreground);
   }
 
   /* §5.6 — the theme switch is one whole-page cross-fade. */
@@ -265,12 +271,12 @@
 
 /* §5.5 — floating chrome; solid when the user prefers it. */
 @utility material {
-  background-color: color-mix(in srgb, var(--color-background) 72%, transparent);
+  background-color: color-mix(in srgb, var(--background) 72%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   box-shadow: var(--shadow-material);
   @media (prefers-reduced-transparency: reduce) {
-    background-color: var(--color-background);
+    background-color: var(--background);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -299,7 +305,7 @@
   outline: 2px solid transparent;
   outline-offset: 2px;
   &:focus-visible {
-    outline-color: var(--color-ring);
+    outline-color: var(--ring);
   }
 }
 
@@ -328,12 +334,12 @@
 
 /* §8.1 — the shimmer, static under reduced motion. */
 @utility skeleton {
-  background-color: var(--color-muted);
+  background-color: var(--muted);
   background-image: linear-gradient(
     90deg,
-    var(--color-muted) 0%,
-    var(--color-secondary) 50%,
-    var(--color-muted) 100%
+    var(--muted) 0%,
+    var(--secondary) 50%,
+    var(--muted) 100%
   );
   background-size: 200% 100%;
   animation: var(--animate-shimmer);

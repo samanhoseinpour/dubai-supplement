@@ -41,29 +41,44 @@ class FakePublisher implements EventPublisher {
   }
 }
 
-// The one thing the service calls on Db: a transaction that hands the
-// callback a marker, so a test can assert the same marker reached both ports.
-const TX = { marker: 'tx' } as unknown as Db
-const fakeDb = {
-  transaction: <T>(fn: (tx: Db) => Promise<T>): Promise<T> => fn(TX),
-} as unknown as Db
+/**
+ * The one thing the service calls on Db. Every `transaction` call is counted
+ * and hands its callback a marker of its own, so a test can tell one
+ * transaction from two: a `create` split in two opens two and gives each port
+ * a different marker.
+ */
+class FakeDb {
+  readonly transactions: Db[] = []
+
+  transaction<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
+    const tx = { marker: 'tx', n: this.transactions.length + 1 } as unknown as Db
+    this.transactions.push(tx)
+    return fn(tx)
+  }
+}
 
 function makeService() {
+  const db = new FakeDb()
   const repo = new FakeBrandRepository()
   const publisher = new FakePublisher()
-  return { service: new BrandService(fakeDb, repo, publisher), repo, publisher }
+  return { service: new BrandService(db as unknown as Db, repo, publisher), db, repo, publisher }
 }
 
 describe('BrandService', () => {
   it('creates the brand and its event inside one transaction', async () => {
-    const { service, repo, publisher } = makeService()
+    const { service, db, repo, publisher } = makeService()
     const brand = await service.create({ slug: 'muscletech', name: 'ماسل‌تک' })
     expect(repo.rows).toEqual([brand])
     expect(publisher.events).toEqual([
       expect.objectContaining({ type: 'catalog.brand.created', aggregateId: brand.id }),
     ])
-    expect(repo.seenTx).toEqual([TX])
-    expect(publisher.seenTx).toEqual([TX])
+    // Exactly one transaction, and both ports wrote through it — compared by
+    // identity, because every call hands out a marker of its own.
+    expect(db.transactions).toHaveLength(1)
+    expect(repo.seenTx).toHaveLength(1)
+    expect(publisher.seenTx).toHaveLength(1)
+    expect(repo.seenTx[0]).toBe(db.transactions[0])
+    expect(publisher.seenTx[0]).toBe(repo.seenTx[0])
   })
 
   it('findBySlug answers null and getBySlug throws the catalog 404 for an unknown slug', async () => {

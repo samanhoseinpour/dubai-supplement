@@ -128,12 +128,12 @@ describe('DrizzleBrandRepository', () => {
   })
 
   // Review Focus 5: names that differ only by a ZWNJ are two brands
-  // (uniqueness is on the slug) with one search_text. The collation orders
-  // this pair: `fa` is deterministic, so Postgres settles ICU's tie by
-  // comparing bytes, and the space form (U+0020) sorts before the ZWNJ form
-  // (U+200C). `id` never decides here — it only separates byte-identical
-  // names, which the next test pins. The ZWNJ form is inserted first, so
-  // insertion order would list them the other way round.
+  // (uniqueness is on the slug) with one search_text. ICU's `fa` orders this
+  // pair itself — the space has a primary weight and the ZWNJ is ignorable,
+  // so the space form sorts first. `id` never decides here, because with a
+  // deterministic collation only byte-identical names can tie, which the
+  // next test pins. The ZWNJ form is inserted first, so insertion order
+  // would list them the other way round.
   it('keeps two names that differ only by ZWNJ as two rows with one search_text', async () => {
     await insertAll([
       { slug: 'muscletech', name: 'ماسل‌تک' },

@@ -89,6 +89,13 @@
     },
     "budget": { "dependsOn": ["build"], "outputs": [] },
     "web#test": { "dependsOn": ["^build"], "env": ["NODE_ENV"] },
+    "web#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "inputs": ["$TURBO_DEFAULT$", ".env"],
+      "env": ["NEXT_PUBLIC_SITE_URL", "API_INTERNAL_URL"]
+    },
+    "web#typecheck": { "dependsOn": ["build"] },
     "web#e2e": {
       "dependsOn": ["build"],
       "cache": false,

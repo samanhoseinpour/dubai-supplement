@@ -506,6 +506,7 @@ Every feature is a vertical slice: brainstorm → `docs/superpowers/specs/YYYY-M
 | 0016 | Vitest 5 adopted on the default `forks` pool; `unplugin-swc` not installed (Oxc emits decorator metadata natively) |
 | 0017 | Redis throttler storage: `@nest-lab` under a peer override, with the ioredis hand-roll as fallback (§5.5)          |
 | 0018 | One pull request per phase — supersedes the single-branch instruction in §13.1                                     |
+| 0019 | Two-colour design tokens with enforced semantics (3a spec §5)                                                      |
 
 ## 13. Git, GitHub, attribution
 
@@ -519,13 +520,13 @@ Repository-local `user.name "Saman Hoseinpour"` and `user.email` **`105006550+sa
 
 ### 13.3 Branching and protection
 
-Trunk-based: `main` plus short-lived `feat/*`, `fix/*`, `chore/*`, `docs/*`; squash merges for feature PRs (rebase-merge for the foundation PR, §13.1); conventional commit titles. GitHub **ruleset on `main`**: require a pull request, require the `authors` and `secrets` status checks from the first push and `check`, `openapi`, `e2e` once they have reported green (§13.1), block force-pushes and deletions; repository admin may bypass for emergencies. PR template checklist: spec/plan linked · tests added · `pnpm check` green · no AI trailers · docs/ADR updated if a term or decision was introduced.
+Trunk-based: `main` plus short-lived `feat/*`, `fix/*`, `chore/*`, `docs/*`; rebase merges for every PR, per [ADR-0018](../../decisions/0018-one-pr-per-phase.md) (amended 2026-09-25; this originally read "squash merges for feature PRs, rebase-merge for the foundation PR"); conventional commit titles. GitHub **ruleset on `main`**: require a pull request, require the `authors` and `secrets` status checks from the first push and `check`, `openapi`, `e2e` once they have reported green (§13.1), block force-pushes and deletions; repository admin may bypass for emergencies. PR template checklist: spec/plan linked · tests added · `pnpm check` green · no AI trailers · docs/ADR updated if a term or decision was introduced.
 
 ### 13.4 Attribution enforcement, three layers
 
 1. Claude Code `attribution` settings (project and user level) — the text is never generated.
 2. `PreToolUse` hook and lefthook `commit-msg` hook — blocked if it appears anyway.
-3. `pnpm audit:authors` (`scripts/audit-authors.sh`): on pull requests scans `git log --no-merges origin/main..HEAD` (the checkout is GitHub's synthetic merge commit, so merges are excluded); on pushes to `main`, in `pre-push` and locally scans `git log --no-merges HEAD` (every commit reachable from the branch being pushed); `--all` is never used. Every `%an <%ae>` must match a line of `scripts/audit-authors.allowed` — Saman's identity and `renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>` (dependency bumps only). The `%B` scan for `co-authored-by` / `generated with` / `claude-session` / `noreply@anthropic.com` applies to every commit including Renovate's. Author only, never committer (squash merges are committed by `GitHub <noreply@github.com>`). Runs in the CI `authors` job and in `pre-push`. The Claude GitHub App/Action is never installed for commits.
+3. `pnpm audit:authors` (`scripts/audit-authors.sh`): on pull requests scans `git log --no-merges origin/main..HEAD` (the checkout is GitHub's synthetic merge commit, so merges are excluded); on pushes to `main`, in `pre-push` and locally scans `git log --no-merges HEAD` (every commit reachable from the branch being pushed); `--all` is never used. Every `%an <%ae>` must match a line of `scripts/audit-authors.allowed` — Saman's identity and `renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>` (dependency bumps only). The `%B` scan for `co-authored-by` / `generated with` / `claude-session` / `noreply@anthropic.com` applies to every commit including Renovate's. Author only, never committer (a merge performed by GitHub is committed by `GitHub <noreply@github.com>`). Runs in the CI `authors` job and in `pre-push`. The Claude GitHub App/Action is never installed for commits.
 
 ## 14. Reference slice — end-to-end data flow
 

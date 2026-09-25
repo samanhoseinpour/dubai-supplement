@@ -29,7 +29,8 @@ io()` before any uncached work inside a page island. `connection` comes
   component. `app/globals.css` is the source of truth; Tailwind's palette and
   its default type, radius, shadow, easing and weight scales are deleted, so
   `bg-blue-500`, `text-xl`, `shadow-lg` are unknown classes and fail lint.
-  An arbitrary colour (`bg-[#…]`) fails lint.
+  An arbitrary colour (`bg-[#…]`), a variable colour (`bg-(--x)`), a literal
+  length (`w-[13px]`) and a literal duration (`duration-300`) fail lint.
 - **The inline axis must be logical.** `enforce-logical-properties` is scoped
   to the inline axis: `ml- mr- pl- pr- left- right- border-l|r- rounded-l|r-`
   and the physical corners fail; block-axis and dimension utilities
@@ -52,7 +53,9 @@ io()` before any uncached work inside a page island. `connection` comes
   `--ease-out|in`; press feedback on pointer-down; hover only on hover
   devices; focus rings instant. No entrance choreography, ever. Reduced
   motion, reduced transparency and `prefers-contrast: more` are honoured in
-  `globals.css`, not per component. Springs come from `lib/motion.ts`;
+  `globals.css`, not per component — the one JavaScript check is the theme
+  toggle's `prefersReducedMotion()`, because a media query cannot gate
+  `startViewTransition`. Springs come from `lib/motion.ts`;
   `motion` is installed by the first gesture surface, loaded through
   `LazyMotion` with `domAnimation` and `m`. When that surface arrives:
   momentum projection is `((v / 1000) * rate) / (1 - rate)` with

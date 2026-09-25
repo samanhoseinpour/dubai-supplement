@@ -33,12 +33,14 @@ is `app/globals.css` plus `components/ui`; its spec is
 
 `lib` → workspace packages only · `components/ui` → `lib` ·
 `components/site` → `ui` + `lib` · `app` → anything · nothing → `app`.
-`apps/web` never imports `apps/api`: it declares no dependency on it, and
-pnpm's isolated `node_modules` makes the import unresolvable.
+`apps/web` never imports `apps/api`: no dependency is declared, pnpm's isolation
+makes the import unresolvable, and a relative path into it fails lint.
 
-## What fails the build
+## What fails `pnpm check` or `pnpm e2e`
 
 - A class outside the tokens (`bg-blue-500`, `text-xl`, `bg-[#fff]`).
+- A literal size, duration or variable colour — `w-[13px]`, `duration-300`,
+  `bg-(--x)`.
 - A physical inline-axis utility, even behind a variant (`md:ml-4`); the
   block axis and sizes (`mt-`, `top-`, `w-`, `h-`) never mirror and pass.
 - `tracking-*`; `leading-none|tight`; `text-left|right|justify`; numeric `z-*`.
@@ -47,7 +49,7 @@ pnpm's isolated `node_modules` makes the import unresolvable.
 - A token whose text pair drops below 4.5:1, or `--input` below 3:1.
 - A route whose own first-load JavaScript (beyond Next's shared root files)
   exceeds 100 KB gzipped, a framework floor over 140 KB, or a font over 120 KB.
-- An axe violation at WCAG 2.2 AA on `/design`; a target under 44 × 44.
+- `pnpm e2e`: an axe violation at WCAG 2.2 AA on `/design`; a target under 44 × 44.
 
 ## What a reviewer checks
 

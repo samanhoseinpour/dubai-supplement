@@ -348,7 +348,7 @@ Reads: Server Components → `@ds/api-client/server` (`server-only`, `React.cach
 - `/brands/[slug]` — `page.tsx` is synchronous and passes the `params` promise through: `<Suspense fallback={…}><BrandDetail params={params} /></Suspense>`; `BrandDetail` does `const { slug } = await params`, then `await io()`, then `getBrand(slug)` (`'use cache'`, `cacheTag('catalog', 'brand:<slug>')`) which returns `null` on `ApiError.code === 'CATALOG_BRAND_NOT_FOUND'`; the component calls `notFound()` on `null` and otherwise renders name and description. This exercises `lib/errors.ts` and `not-found.tsx`.
 - `/health` — §7.5.
 
-That is the entire UI at foundation. **Amended 2026-09-25:** the foundation UI also includes `/design` (noindex) and the theme toggle; the sentence reads across sub-phases 3a and 3c.
+That is the entire UI at foundation. **Amended 2026-09-25:** the foundation UI also includes `/design` (noindex); the theme toggle added in 3a was removed the same day by ADR-0021; the sentence reads across sub-phases 3a and 3c.
 
 ### 7.9 Tests and budgets
 
@@ -486,27 +486,29 @@ Every feature is a vertical slice: brainstorm → `docs/superpowers/specs/YYYY-M
 
 ### 12.4 ADRs written during the foundation (MADR minimal: Context and Problem Statement / Considered Options / Decision Outcome)
 
-| #    | Title                                                                                                              |
-| ---- | ------------------------------------------------------------------------------------------------------------------ |
-| 0001 | NestJS 12 ESM on Fastify (spike outcome recorded here)                                                             |
-| 0002 | Drizzle ORM over Prisma / MikroORM                                                                                 |
-| 0003 | pnpm workspaces + Turborepo                                                                                        |
-| 0004 | PostgreSQL 16 and Redis 7.2 (Liara ceilings; UUIDv7 in application code)                                           |
-| 0005 | Zod-first contracts → OpenAPI → openapi-fetch client                                                               |
-| 0006 | Next.js Cache Components from day one; Next server is the only API caller                                          |
-| 0007 | Persian-only, RTL-only storefront; Vazirmatn; logical CSS only                                                     |
-| 0008 | Money as IRR minor units with a configurable display unit                                                          |
-| 0009 | Transactional outbox before any queue; BullMQ deferred                                                             |
-| 0010 | Hosting on Liara + ArvanCloud; API not publicly exposed; Liara-built images                                        |
-| 0011 | No online payment at launch; WhatsApp handoff seam in checkout                                                     |
-| 0012 | Human-only git attribution (plus Renovate) and its enforcement                                                     |
-| 0013 | Public repository with rulesets on `main`                                                                          |
-| 0014 | TypeScript held at 6.0.3 — why, and the three conditions that unblock 7.x (§3)                                     |
-| 0015 | pnpm 12 adopted over 11.27.1; `forceLegacyDeploy` kept although ≥ 12.2.0 no longer needs it                        |
-| 0016 | Vitest 5 adopted on the default `forks` pool; `unplugin-swc` not installed (Oxc emits decorator metadata natively) |
-| 0017 | Redis throttler storage: `@nest-lab` under a peer override, with the ioredis hand-roll as fallback (§5.5)          |
-| 0018 | One pull request per phase — supersedes the single-branch instruction in §13.1                                     |
-| 0019 | Two-colour design tokens with enforced semantics (3a spec §5)                                                      |
+| #    | Title                                                                                                                            |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 0001 | NestJS 12 ESM on Fastify (spike outcome recorded here)                                                                           |
+| 0002 | Drizzle ORM over Prisma / MikroORM                                                                                               |
+| 0003 | pnpm workspaces + Turborepo                                                                                                      |
+| 0004 | PostgreSQL 16 and Redis 7.2 (Liara ceilings; UUIDv7 in application code)                                                         |
+| 0005 | Zod-first contracts → OpenAPI → openapi-fetch client                                                                             |
+| 0006 | Next.js Cache Components from day one; Next server is the only API caller                                                        |
+| 0007 | Persian-only, RTL-only storefront; Vazirmatn; logical CSS only                                                                   |
+| 0008 | Money as IRR minor units with a configurable display unit                                                                        |
+| 0009 | Transactional outbox before any queue; BullMQ deferred                                                                           |
+| 0010 | Hosting on Liara + ArvanCloud; API not publicly exposed; Liara-built images                                                      |
+| 0011 | No online payment at launch; WhatsApp handoff seam in checkout                                                                   |
+| 0012 | Human-only git attribution (plus Renovate) and its enforcement                                                                   |
+| 0013 | Public repository with rulesets on `main`                                                                                        |
+| 0014 | TypeScript held at 6.0.3 — why, and the three conditions that unblock 7.x (§3)                                                   |
+| 0015 | pnpm 12 adopted over 11.27.1; `forceLegacyDeploy` kept although ≥ 12.2.0 no longer needs it                                      |
+| 0016 | Vitest 5 adopted on the default `forks` pool; `unplugin-swc` not installed (Oxc emits decorator metadata natively)               |
+| 0017 | Redis throttler storage: `@nest-lab` under a peer override, with the ioredis hand-roll as fallback (§5.5)                        |
+| 0018 | One pull request per phase — supersedes the single-branch instruction in §13.1                                                   |
+| 0019 | Two-colour design tokens with enforced semantics (3a spec §5)                                                                    |
+| 0020 | Black Iris and Lapis: the ink is the primary, the blue is an ink and a surface, signal colours are derived (3a spec §5, amended) |
+| 0021 | A single light theme (3a spec §5.6, amended)                                                                                     |
 
 ## 13. Git, GitHub, attribution
 

@@ -76,3 +76,5 @@ packages/api-client/tsconfig.json
 packages/api-client/tsconfig.build.json
 packages/api-client/eslint.config.js
 packages/api-client/vitest.config.ts
+apps/api/CLAUDE.md
+packages/contracts/CLAUDE.md

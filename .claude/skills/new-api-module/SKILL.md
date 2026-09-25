@@ -6,8 +6,9 @@ disable-model-invocation: true
 
 # New API module
 
-> **Phase 2 onward.** This skill copies the `catalog` module, which does not
-> exist until the reference slice is built. Until then it has nothing to copy.
+> The `catalog` module (Phase 3b, 2026-09) is the template this skill copies:
+> `apps/api/src/modules/catalog/`. Its `index.ts`, `catalog.module.ts`,
+> `api/`, `application/`, `domain/` and `infrastructure/` are the anatomy.
 
 Copy `apps/api/src/modules/catalog/` to `apps/api/src/modules/<context>/` and
 replace the names. Keep the anatomy exactly (spec §5.3):

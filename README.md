@@ -9,7 +9,7 @@ fitness supplements.
 > Redis and object storage on the API side; the shell, a design system of
 > two brand colours plus signal tokens, a single light theme, the `/design`
 > gallery and the Playwright + axe suite on the web side. No product feature
-> does: the catalogue arrives with Phase 3b and the brand pages with 3c. The
+> does: the catalogue's Brand slice (3b) is built; the brand pages arrive with 3c. The
 > table below is the chosen stack, not a list of what is built.
 
 ## Stack
@@ -45,7 +45,7 @@ pnpm dev                                # api on :3001, web on :3000
 
 The API refuses to boot on an invalid environment, so the copies are not
 optional. The storefront serves its shell and the design gallery at
-`http://localhost:3000/design`; there is nothing to seed until Phase 3b.
+`http://localhost:3000/design`; `pnpm db:seed` inserts the store's nine brands.
 End to end: `pnpm e2e:install` once per machine (Chromium), then `pnpm e2e`.
 
 Verify everything with one command:

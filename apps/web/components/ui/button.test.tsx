@@ -20,6 +20,30 @@ describe('Button', () => {
     },
   )
 
+  it('fills the primary with the ink and draws no edge on it (ADR-0020)', () => {
+    render(<Button variant="primary">ادامه</Button>)
+    const button = screen.getByRole('button')
+    expect(button).toHaveClass('bg-primary', 'text-primary-foreground', 'hover:bg-primary/90')
+    expect(button).not.toHaveClass('border', 'border-input')
+  })
+
+  it('hovers the secondary from the 12 % Lapis tint to the 16 % accent tint', () => {
+    render(<Button variant="secondary">ادامه</Button>)
+    expect(screen.getByRole('button')).toHaveClass(
+      'bg-secondary',
+      'text-secondary-foreground',
+      'hover:bg-accent',
+      'hover:text-accent-foreground',
+    )
+  })
+
+  it('sets the link variant in the link ink and darkens it to the foreground on hover', () => {
+    render(<Button variant="link">ادامه</Button>)
+    const button = screen.getByRole('button')
+    expect(button).toHaveClass('text-link', 'underline', 'hover:text-foreground')
+    expect(button).not.toHaveClass('text-foreground', 'hover:text-muted-foreground')
+  })
+
   it('is secondary by default — primary is a choice, one per view (spec §9)', () => {
     render(<Button>ادامه</Button>)
     expect(screen.getByRole('button')).toHaveAttribute('data-variant', 'secondary')

@@ -3,22 +3,23 @@ import type { ComponentProps, MouseEvent, ReactNode } from 'react'
 import { ICON_SIZE, IconSpinner } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
-// Spec §8.1. `primary` is the only filled variant. Its `--input` edge is what
-// light mode needs (Frozen on paper is 1.87:1, §5.2); in dark mode the same
-// edge composites to Frozen over Frozen and vanishes, so no `dark:` variant is
-// needed — which also keeps the gallery's forced panels honest (Task 9).
-// Sizes start at 44 px — nothing smaller exists (§9, Fitts).
+// Spec §8.1, amended 2026-09-25 (ADR-0020). `primary` is the ink as a fill —
+// Iris under a paper label, 19.10:1 — so it needs no edge. `secondary` is the
+// Lapis 12 % tint under a Lapis label and hovers to the 16 % accent tint;
+// `ghost` hovers the same way, so its label turns Lapis on purpose. `link` is
+// the link ink, underlined, and darkens to the foreground on hover. Sizes
+// start at 44 px — nothing smaller exists (§9, Fitts).
 export const buttonVariants = cva(
   'relative inline-flex press items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap focus-ring select-none disabled:pointer-events-none disabled:opacity-50 aria-busy:pointer-events-none',
   {
     variants: {
       variant: {
-        primary: 'border border-input bg-primary text-primary-foreground hover:bg-primary/90',
+        primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
         secondary:
           'bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground',
         ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        link: 'text-foreground underline decoration-1 underline-offset-3 hover:text-muted-foreground',
+        link: 'text-link underline decoration-1 underline-offset-3 hover:text-foreground',
       },
       size: {
         md: 'min-h-11 px-4 text-body',

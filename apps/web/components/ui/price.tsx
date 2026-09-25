@@ -43,7 +43,7 @@ export function Price({ amountMinor, original, className }: PriceProps) {
             <span className="sr-only">{copy.price.original}: </span>
             {formatToman(discount.original)}
           </s>
-          <Badge variant="inverted">
+          <Badge variant="sale">
             {formatNumber(discount.percent)}٪ {copy.price.discount}
           </Badge>
         </>

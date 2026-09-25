@@ -19,9 +19,15 @@ import base from './base.js'
 
 const aliasResolver = fileURLToPath(new URL('./web-alias-resolver.js', import.meta.url))
 
-// A class may carry any number of `variant:` prefixes; every pattern below
-// tolerates them so `md:ml-4` is judged like `ml-4`.
-const VARIANTS = String.raw`^(?:[^\s:]+:)*`
+// A class may carry any number of `variant:` prefixes and Tailwind's
+// important marker in either position (`md:!leading-none`, `leading-none!`);
+// every pattern below tolerates them so `md:ml-4` is judged like `ml-4`.
+const VARIANTS = String.raw`^(?:[^\s:]+:)*!?`
+// An arbitrary value opens with `[` (a literal) or `(` (a variable).
+const ARBITRARY = String.raw`[\[(]`
+// The utilities that carry colour, with an optional side or axis (`border-s-`).
+const COLOUR_UTILITY = String.raw`(?:bg|text|border|ring|outline|fill|stroke|decoration|from|via|to|divide|placeholder|accent|caret)(?:-[a-z]{1,2})?`
+const LENGTH_UNIT = String.raw`(?:px|r?em|%|ch|ex|lh|rlh|cap|ic|pt|pc|in|cm|mm|[sdl]?v(?:w|h|i|b|min|max)|cq(?:w|h|i|b|min|max))`
 
 const ROUTE_SEGMENT_CONFIGS = ['dynamic', 'revalidate', 'fetchCache', 'runtime', 'dynamicParams']
 
@@ -33,6 +39,13 @@ const LUCIDE = {
   name: 'lucide-react',
   message:
     'Icons come from lib/icons.ts under semantic names — IconForward, not ChevronLeft (spec §8.2).',
+}
+// pnpm's isolation makes `apps/api` unresolvable by its package name; a
+// relative path into it resolves, so the specifier itself is banned.
+const API_BOUNDARY = {
+  regex: String.raw`(^|/)apps/api(/|$)|(^|/)api/(src|dist)/`,
+  message:
+    'api-boundary: apps/web never imports apps/api, not even types — use @ds/contracts, @ds/api-client and @ds/persian (north-star §2.3).',
 }
 
 // Layer 1. eslint-config-next's first object declares an `import/resolver`
@@ -57,22 +70,50 @@ const javascriptParser = {
   languageOptions: { parser: tseslint.parser },
 }
 
-// Layer 2.
+// Layer 2. A class gets the first message that matches, so the namespace
+// patterns come before the generic literal-length one.
 const RESTRICTED_CLASSES = [
   {
     pattern: String.raw`\[(?:#|rgba?\(|hsla?\(|oklch\(|oklab\(|lab\(|lch\(|color\()`,
     message: 'arbitrary-colour: only the tokens in app/globals.css carry colour (spec §5.1).',
   },
   {
+    pattern: String.raw`${VARIANTS}${COLOUR_UTILITY}-(?:\[(?:var\(|color:|--|color-mix\(|[a-zA-Z]+\])|\((?:color:)?--)`,
+    message:
+      'variable-colour: a colour reaches a component only as a token utility — bg-primary, never bg-(--x), bg-[var(--x)] or text-[red] (spec §5.1).',
+  },
+  {
+    pattern: String.raw`${VARIANTS}(?:duration|delay)-(?:\d|\[|\((?!--duration-))`,
+    message:
+      'duration: motion runs on the --duration-press|quick|fade tokens — duration-(--duration-quick), never duration-300 (spec §7.2).',
+  },
+  {
+    pattern: String.raw`${VARIANTS}ease-(?:\[|\((?!--ease-))`,
+    message: 'easing: only ease-out and ease-in exist — never a literal curve (spec §7.2).',
+  },
+  {
+    pattern: String.raw`${VARIANTS}(?:animate|text|leading|font)-${ARBITRARY}`,
+    message:
+      'arbitrary-scale: the type, weight, leading and animation scales are the tokens; an arbitrary value is outside them (spec §5.4, §6).',
+  },
+  {
+    pattern: String.raw`${VARIANTS}rounded-(?:[a-z]{1,2}-)?${ARBITRARY}`,
+    message: 'arbitrary-radius: only rounded-sm, -md, -lg and -full exist (spec §5.4).',
+  },
+  {
+    pattern: String.raw`${VARIANTS}(?:inset-)?shadow-${ARBITRARY}`,
+    message: 'arbitrary-shadow: only shadow-sm, shadow-md and material exist (spec §5.4).',
+  },
+  {
     pattern: `${VARIANTS}-?tracking-`,
     message: 'tracking: letter-spacing is never set — connected letters tear apart (spec §6.3).',
   },
   {
-    pattern: `${VARIANTS}leading-(?:none|tight)$`,
+    pattern: `${VARIANTS}leading-(?:none|tight)!?$`,
     message: 'leading: every size in the scale carries its own leading (spec §6.3).',
   },
   {
-    pattern: `${VARIANTS}text-(?:left|right|justify)$`,
+    pattern: `${VARIANTS}text-(?:left|right|justify)!?$`,
     message:
       'alignment: everything is start-aligned; centring is for empty states and the hero (spec §6.3).',
   },
@@ -85,8 +126,15 @@ const RESTRICTED_CLASSES = [
     message: 'corners: physical corner radii — use rounded-ss, -se, -es, -ee (foundation §7.2).',
   },
   {
-    pattern: `${VARIANTS}-?z-(?:\\d+|\\[)`,
+    pattern: String.raw`${VARIANTS}-?z-(?:\d+|${ARBITRARY})`,
     message: 'z-index: only z-header, z-overlay, z-sheet and z-toast exist (spec §5.4).',
+  },
+  {
+    // A value that is, or opens with, a number carrying a length unit:
+    // `[13px]`, `[1px_2px]`, `[30%]`. calc() and var() bodies are not judged.
+    pattern: String.raw`\[-?(?:\d+\.?\d*|\.\d+)${LENGTH_UNIT}(?![a-z])`,
+    message:
+      'literal-length: sizes come from the spacing scale and the tokens — p-4, max-w-prose, never w-[13px] (spec §5.4, §11).',
   },
 ]
 
@@ -140,7 +188,7 @@ const routeSegmentConfigBan = {
 const importBans = {
   files: ['**/*.ts', '**/*.tsx'],
   rules: {
-    'no-restricted-imports': ['error', { paths: [FONT_GOOGLE, LUCIDE] }],
+    'no-restricted-imports': ['error', { paths: [FONT_GOOGLE, LUCIDE], patterns: [API_BOUNDARY] }],
   },
 }
 
@@ -149,7 +197,7 @@ const importBans = {
 const iconsFile = {
   files: ['lib/icons.ts'],
   rules: {
-    'no-restricted-imports': ['error', { paths: [FONT_GOOGLE] }],
+    'no-restricted-imports': ['error', { paths: [FONT_GOOGLE], patterns: [API_BOUNDARY] }],
   },
 }
 

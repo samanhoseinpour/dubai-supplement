@@ -101,6 +101,78 @@ describe('restricted classes (spec §6.3, §11)', () => {
   })
 })
 
+describe('literal values (spec §5.1, §7.2, §11)', () => {
+  it.each([
+    // durations and delays — anything but the --duration-* tokens
+    'duration-300',
+    'delay-150',
+    'md:duration-300',
+    'duration-(--x)',
+    'delay-[1s]',
+    // literal lengths, anywhere
+    'text-[13px]',
+    'w-[13px]',
+    'p-[7px]',
+    'm-[1px_2px]',
+    'gap-[3px]',
+    'max-w-[42rem]',
+    'ring-[3px]',
+    'h-[100dvh]',
+    'basis-[30%]',
+    // the deleted scales: radius, shadow, easing, weight, leading, animation, z
+    'rounded-[6px]',
+    'rounded-ss-[6px]',
+    'rounded-(--x)',
+    'shadow-[0_1px_2px_rgba(0,0,0,0.1)]',
+    'shadow-(--x)',
+    'inset-shadow-[0_1px_0_#fff]',
+    'ease-[cubic-bezier(0,0,1,1)]',
+    'ease-(--x)',
+    'font-[550]',
+    'font-(--x)',
+    'leading-[1.1]',
+    'leading-(--x)',
+    'animate-[wiggle_1s]',
+    'animate-(--x)',
+    'z-(--z-x)',
+    'z-[5]',
+    // variable, typed and keyword colours
+    'bg-(--brand)',
+    'bg-[var(--brand)]',
+    'bg-[color:var(--brand)]',
+    'bg-[--brand]',
+    'bg-(color:--brand)',
+    'text-[color:red]',
+    'text-[red]',
+    'border-s-(--brand)',
+    'from-(--brand)',
+    'ring-[var(--brand)]',
+    // the important marker in either position
+    'leading-none!',
+    '!tracking-tight',
+    'md:leading-none!',
+    'md:!text-left',
+    'text-left!',
+  ])('rejects "%s"', async (className) => {
+    const messages = await lint('components/ui/fixture.tsx', jsx(className))
+    expect(messages.some(rule('no-restricted-classes'))).toBe(true)
+  })
+
+  it.each([
+    'duration-(--duration-quick)',
+    'delay-(--duration-fade)',
+    'transition-colors duration-(--duration-quick) ease-(--ease-out)',
+    // Separately: together they conflict on transition-timing-function.
+    'ease-out',
+    'ease-in',
+    'press focus-ring text-body font-medium text-foreground bg-primary rounded-md shadow-sm',
+    'hover:bg-primary/90 z-header',
+    'w-full min-h-dvh size-11 gap-2 p-4 grid-cols-[1fr_auto]',
+  ])('accepts "%s"', async (className) => {
+    expect(await lint('components/ui/fixture.tsx', jsx(className))).toEqual([])
+  })
+})
+
 describe('conflicts and duplicates', () => {
   it('rejects two classes that set the same property', async () => {
     const messages = await lint('components/ui/fixture.tsx', jsx('ps-2 ps-4'))
@@ -146,6 +218,34 @@ describe('restricted imports (foundation §7.2, spec §8.2)', () => {
   it.each(['app/layout.tsx', 'lib/icons.ts'])('rejects next/font/google in %s', async (file) => {
     const messages = await lint(file, "import { Inter } from 'next/font/google'\n")
     expect(messages.some((m) => m.startsWith('no-restricted-imports:'))).toBe(true)
+  })
+
+  // pnpm's isolation makes `apps/api` unresolvable by name; a relative path
+  // into it resolves fine, so the ban is on the specifier (north-star §2.3).
+  it.each(['app/page.tsx', 'lib/icons.ts'])(
+    'rejects a relative path into apps/api from %s',
+    async (file) => {
+      const messages = await lint(
+        file,
+        "import { x } from '../../api/src/modules/health/index.js'\n",
+      )
+      expect(
+        messages.some((m) => m.startsWith('no-restricted-imports:') && m.includes('api-boundary')),
+      ).toBe(true)
+    },
+  )
+
+  it.each([
+    [
+      'lib/errors.ts',
+      "import type { ErrorCode } from '@ds/contracts'\nexport type { ErrorCode }\n",
+    ],
+    [
+      'components/ui/price.tsx',
+      "import { formatToman } from '@ds/persian'\nexport { formatToman }\n",
+    ],
+  ])('accepts a workspace package from %s', async (file, code) => {
+    expect(await lint(file, code)).toEqual([])
   })
 })
 

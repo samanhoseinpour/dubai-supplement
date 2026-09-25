@@ -1,4 +1,5 @@
 import type { ErrorCode } from '@ds/contracts'
+import { copy } from './copy'
 
 // Foundation §7.6 and spec §6.5: every code the API can emit has a Persian
 // sentence that says what happened and what to do next; English never
@@ -17,7 +18,10 @@ const MESSAGES: Record<ErrorCode, string> = {
   CATALOG_BRAND_SLUG_TAKEN: 'این نشانی برند قبلاً استفاده شده است. نشانی دیگری انتخاب کنید.',
 }
 
-export const FALLBACK_MESSAGE = 'مشکلی پیش آمد. دوباره تلاش کنید.'
+// One generic sentence: a code this build does not know and an error that
+// carries no code (describeError) both show copy.errors.body, never a second
+// wording of the same advice.
+export const FALLBACK_MESSAGE = copy.errors.body
 
 function isErrorCode(code: string): code is ErrorCode {
   return Object.hasOwn(MESSAGES, code)
@@ -25,4 +29,17 @@ function isErrorCode(code: string): code is ErrorCode {
 
 export function errorMessage(code: string): string {
   return isErrorCode(code) ? MESSAGES[code] : FALLBACK_MESSAGE
+}
+
+/** The sentence an error boundary shows: the code's message if the error carries one, else the generic body. */
+export function describeError(error: unknown): string {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string'
+  ) {
+    return errorMessage(error.code)
+  }
+  return copy.errors.body
 }

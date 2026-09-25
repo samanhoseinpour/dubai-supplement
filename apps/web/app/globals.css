@@ -7,10 +7,11 @@
 /*
  * The design system's single source of truth (spec §5–§7). Every colour,
  * size, radius, shadow and duration a component uses is a token here;
- * test/tokens.test.ts re-derives the neutrals and checks every pair.
+ * test/tokens.test.ts re-derives the neutrals, the Lapis tints, the signal
+ * inks and the soft surfaces and checks every pair.
  */
 
-/* ---------- 1. Two colours are a fact (§5.1) ---------- */
+/* ---------- 1. Two brand colours are a fact (§5.1) ---------- */
 
 @theme {
   /* Tailwind's palette and scales are deleted: bg-blue-500, text-xl,
@@ -24,7 +25,8 @@
   --font-weight-*: initial;
 
   --color-iris: #080813;
-  --color-frozen: #a0bddb;
+  /* OKLCH L 0.50, C 0.15, h 255 — the signal inks' rule (§5.2, ADR-0020). */
+  --color-lapis: #1762b6;
 
   --font-sans: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
 
@@ -95,7 +97,8 @@
 /* ---------- 2. Semantic tokens under shadcn's names (§5.2) ---------- */
 /* One theme (ADR-0021): the tokens live on :root and nothing overrides them.
    Text-carrying tokens are solid hex. Alpha appears only on --border and
-   --input. Percentages are "ink mixed over surface" in sRGB. */
+   --input. Percentages are "ink mixed over surface" in sRGB. Soft surfaces
+   are solid too: the signal ink pre-mixed at 12 % over the card. */
 
 :root {
   color-scheme: light;
@@ -105,19 +108,29 @@
   --card-foreground: #080813;
   --popover: #ffffff;
   --popover-foreground: #080813;
-  --primary: #a0bddb;
-  --primary-foreground: #080813;
-  --secondary: #ebebee;
-  --secondary-foreground: #080813;
+  --primary: #080813;
+  --primary-foreground: #fafafc;
+  --secondary: #dfe8f4;
+  --secondary-foreground: #1762b6;
   --muted: #f0f0f3;
   --muted-foreground: #64646c;
-  --accent: #e4ebf4;
-  --accent-foreground: #080813;
-  --destructive: #b3261e;
-  --destructive-foreground: #ffffff;
+  --accent: #d6e2f1;
+  --accent-foreground: #1762b6;
+  --destructive: #b3241f;
+  --destructive-foreground: #fafafc;
+  --destructive-soft: #f6e5e4;
+  --sale: #b3241f;
+  --sale-foreground: #fafafc;
+  --success: #21763c;
+  --success-foreground: #fafafc;
+  --success-soft: #e4efe8;
+  --warning: #8a5619;
+  --warning-foreground: #fafafc;
+  --warning-soft: #f1ebe3;
+  --link: #1762b6;
   --border: color-mix(in srgb, var(--color-iris) 12%, transparent);
   --input: color-mix(in srgb, var(--color-iris) 48%, transparent);
-  --ring: #080813;
+  --ring: #1762b6;
 }
 
 /* Non-colour tokens that are not Tailwind namespaces (§5.4, §7.2). */
@@ -164,6 +177,16 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-sale: var(--sale);
+  --color-sale-foreground: var(--sale-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-link: var(--link);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -212,9 +235,11 @@
     outline-offset: 2px;
   }
 
+  /* The Lapis tint under the ink (15.2:1; the tokens test measures the pair).
+     Not the primary: near-black would swallow the selection. */
   ::selection {
-    background-color: var(--primary);
-    color: var(--primary-foreground);
+    background-color: var(--accent);
+    color: var(--foreground);
   }
 }
 
@@ -298,13 +323,14 @@
   }
 }
 
-/* §8.1 — the shimmer, static under reduced motion. */
+/* §8.1 — the shimmer, static under reduced motion. The band is the ink at
+   alpha over --muted, so it never turns blue: --secondary is a Lapis tint. */
 @utility skeleton {
   background-color: var(--muted);
   background-image: linear-gradient(
     90deg,
     var(--muted) 0%,
-    var(--secondary) 50%,
+    color-mix(in srgb, var(--color-iris) 6%, transparent) 50%,
     var(--muted) 100%
   );
   background-size: 200% 100%;

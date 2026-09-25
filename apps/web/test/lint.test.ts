@@ -80,12 +80,28 @@ describe('unknown classes — the deleted scales (spec §5.1)', () => {
 
 describe('the dark variant (ADR-0021)', () => {
   // ADR-0021: one theme, the variant does not exist. Tailwind's built-in
-  // `dark` is a `prefers-color-scheme` query, so the ban is by name.
-  it.each(['dark:bg-card', 'dark:hover:bg-accent', 'md:dark:bg-card'])(
-    'rejects "%s"',
+  // `dark` and `not-dark` are `prefers-color-scheme` queries, and an arbitrary
+  // at-rule variant can spell the query out, so the ban is by name and by
+  // query — and it is the dark-variant message that must fire, not any
+  // restricted pattern.
+  const darkVariant = (message: string) =>
+    message.startsWith('better-tailwindcss/no-restricted-classes: dark-variant:')
+
+  it.each([
+    'dark:bg-card',
+    'dark:hover:bg-accent',
+    'md:dark:bg-card',
+    'not-dark:bg-card',
+    '[@media(prefers-color-scheme:dark)]:bg-card',
+  ])('rejects "%s"', async (className) => {
+    const messages = await lint('components/ui/fixture.tsx', jsx(className))
+    expect(messages.some(darkVariant)).toBe(true)
+  })
+
+  it.each(['data-dark:bg-card'])(
+    'accepts "%s" — a data attribute, not the theme',
     async (className) => {
-      const messages = await lint('components/ui/fixture.tsx', jsx(className))
-      expect(messages.some(rule('no-restricted-classes'))).toBe(true)
+      expect(await lint('components/ui/fixture.tsx', jsx(className))).toEqual([])
     },
   )
 })

@@ -32,8 +32,9 @@ is `app/globals.css` plus `components/ui`; its spec is
 ## Boundaries (lint-enforced)
 
 `lib` → workspace packages only · `components/ui` → `lib` ·
-`components/site` → `ui` + `lib` · `app` → anything · nothing → `app` ·
-never `apps/api`.
+`components/site` → `ui` + `lib` · `app` → anything · nothing → `app`.
+`apps/web` never imports `apps/api`: it declares no dependency on it, and
+pnpm's isolated `node_modules` makes the import unresolvable.
 
 ## What fails the build
 

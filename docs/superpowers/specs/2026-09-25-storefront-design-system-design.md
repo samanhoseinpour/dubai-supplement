@@ -134,7 +134,7 @@ Foundation Appendix B already inventories web's four variables (`NODE_ENV`, `POR
 }
 ```
 
-The semantic tokens use **shadcn's names**, so every component the CLI generates works without edits. They are defined on `:root` (light) and `[data-theme='dark']`, and exposed to utilities through `@theme inline` so that `bg-background`, `text-primary-foreground` and `border-input` compile to `var(--background)` etc. and switch at runtime without a rebuild.
+The semantic tokens use **shadcn's names**, so every component the CLI generates works without edits. **Amended 2026-09-25 (plan Task 12):** the colour classes do; the type, shadow, radius, z-index and motion classes of a generated component are mapped to §5–§7's scales when it is added, because those default scales are deleted and `no-unknown-classes` rejects them. They are defined on `:root` (light) and `[data-theme='dark']`, and exposed to utilities through `@theme inline` so that `bg-background`, `text-primary-foreground` and `border-input` compile to `var(--background)` etc. and switch at runtime without a rebuild.
 
 **Text-carrying tokens are solid colours**, pre-mixed and committed as hex. Alpha is permitted only on tokens that never carry text (`--border`, `--input`, scrims, hover tints). That constraint is what lets §10.1's contrast test run on the source file without a browser.
 

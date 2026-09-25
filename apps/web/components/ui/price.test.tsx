@@ -18,6 +18,13 @@ describe('Price', () => {
     expect(container.textContent).not.toMatch(/[0-9]/)
   })
 
+  it('marks the discount with the sale chip — red, the Iranian convention (spec §8.1)', () => {
+    const { container } = render(<Price amountMinor={20_000_000n} original={30_000_000n} />)
+    const badge = container.querySelector('.bg-sale')
+    expect(badge).not.toBeNull()
+    expect(badge?.textContent).toContain('تخفیف')
+  })
+
   it('truncates the percentage: 33.67 % reads «۳۳٪», never «۳۴٪»', () => {
     const { container } = render(<Price amountMinor={19_900_000n} original={30_000_000n} />)
     expect(container.textContent).toContain('۳۳٪')

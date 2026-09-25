@@ -3,14 +3,15 @@ import NextLink from 'next/link'
 import type { ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 
-// Spec §8.1: a text link is always underlined — 1 px, 3 px off the baseline —
-// so it is distinguishable without colour. `plain` is for links that look like
-// something else: a button (`buttonVariants`), a whole card (`surfaceVariants`),
-// the wordmark.
+// Spec §8.1, amended 2026-09-25 (ADR-0020): a text link is the link ink —
+// Lapis, 5.82:1 on paper — and always underlined, 1 px, 3 px off the
+// baseline, so it is distinguishable without colour; it darkens to the
+// foreground on hover. `plain` is for links that look like something else: a
+// button (`buttonVariants`), a whole card (`surfaceVariants`), the wordmark.
 export const linkVariants = cva('rounded-sm focus-ring', {
   variants: {
     variant: {
-      text: 'text-foreground underline decoration-1 underline-offset-3 transition-colors duration-(--duration-quick) ease-out hover:text-muted-foreground',
+      text: 'text-link underline decoration-1 underline-offset-3 transition-colors duration-(--duration-quick) ease-out hover:text-foreground',
       plain: 'no-underline',
     },
   },

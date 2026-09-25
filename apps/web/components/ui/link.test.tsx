@@ -10,6 +10,13 @@ describe('Link', () => {
     expect(link).toHaveClass('underline')
   })
 
+  it('is set in the link ink and darkens to the foreground on hover (ADR-0020)', () => {
+    render(<Link href="/brands">برندها</Link>)
+    const link = screen.getByRole('link')
+    expect(link).toHaveClass('text-link', 'hover:text-foreground')
+    expect(link).not.toHaveClass('text-foreground', 'hover:text-muted-foreground')
+  })
+
   it('the plain variant carries no underline and merges the caller’s classes', () => {
     render(
       <Link href="/" variant="plain" className="min-h-11">

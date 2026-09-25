@@ -15,6 +15,13 @@
       "when": 1790228513183,
       "tag": "0001_outbox_events",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790362694925,
+      "tag": "0002_brands",
+      "breakpoints": true
     }
   ]
 }

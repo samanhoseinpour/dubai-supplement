@@ -18,9 +18,16 @@ describe('Price', () => {
     expect(container.textContent).not.toMatch(/[0-9]/)
   })
 
+  it('truncates the percentage: 33.67 % reads «۳۳٪», never «۳۴٪»', () => {
+    const { container } = render(<Price amountMinor={19_900_000n} original={30_000_000n} />)
+    expect(container.textContent).toContain('۳۳٪')
+    expect(container.textContent).not.toContain('۳۴')
+  })
+
   it.each([
     ['equal', 28_500_000n],
     ['lower', 20_000_000n],
+    ['under one per cent higher', 28_600_000n],
   ])('shows no discount when the original is %s (Review Focus 4)', (_label, original) => {
     const { container } = render(<Price amountMinor={28_500_000n} original={original} />)
     expect(container.querySelector('s')).toBeNull()

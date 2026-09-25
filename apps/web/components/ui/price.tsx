@@ -9,29 +9,42 @@ import { cn } from '@/lib/utils'
 export type PriceProps = {
   /** IRR minor units — rials — as everywhere in the system. */
   amountMinor: bigint
-  /** The pre-discount amount; ignored unless it is higher than `amountMinor`. */
+  /** The pre-discount amount; ignored unless the truncated discount is at least 1 %. */
   original?: bigint
   className?: string
 }
 
+/**
+ * The struck amount and its percentage, or null when there is nothing to
+ * show. Integer division truncates on purpose — never promise more than is
+ * given — and a discount that truncates to 0 % is no discount: neither a
+ * struck price nor a «۰٪» badge (spec §8.1).
+ */
+function discountOf(
+  amountMinor: bigint,
+  original: bigint | undefined,
+): { original: bigint; percent: bigint } | null {
+  if (original === undefined || original <= amountMinor) return null
+  const percent = ((original - amountMinor) * 100n) / original
+  return percent > 0n ? { original, percent } : null
+}
+
 export function Price({ amountMinor, original, className }: PriceProps) {
-  const discounted = original !== undefined && original > amountMinor
-  // Integer division truncates on purpose: never promise more than is given.
-  const percent = discounted ? ((original - amountMinor) * 100n) / original : 0n
+  const discount = discountOf(amountMinor, original)
 
   return (
     <span
       className={cn('inline-flex flex-wrap items-baseline gap-x-2 gap-y-1 tabular-nums', className)}
     >
       <span className="text-title font-bold text-foreground">{formatToman(amountMinor)}</span>
-      {discounted ? (
+      {discount ? (
         <>
           <s className="text-small text-muted-foreground">
             <span className="sr-only">{copy.price.original}: </span>
-            {formatToman(original)}
+            {formatToman(discount.original)}
           </s>
           <Badge variant="inverted">
-            {formatNumber(percent)}٪ {copy.price.discount}
+            {formatNumber(discount.percent)}٪ {copy.price.discount}
           </Badge>
         </>
       ) : null}

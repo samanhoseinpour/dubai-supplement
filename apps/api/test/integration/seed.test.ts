@@ -45,10 +45,14 @@ describe('seedBrands', () => {
     expect(report.skipped).toEqual([])
     expect(await counts()).toEqual({ brands: 9, events: 9 })
     const nutriversum = await brands.findBySlug('nutriversum')
-    expect(nutriversum?.name).toBe('نوتری‌ورسوم')
-    expect(nutriversum?.description).toMatch(/^آمینو/)
+    expect(nutriversum?.name).toBe('ناتریورسام')
+    expect(nutriversum?.description).toMatch(/^برند مجارستانی/)
     // Normalised on write: the fixture's Persian digits are stored as ASCII.
-    expect((await brands.findBySlug('7nutrition'))?.description).toContain('100')
+    expect((await brands.findBySlug('nutrex'))?.description).toContain('لیپو 6')
+    // Aavelone Pharma's facts could not be verified, so it carries no description.
+    const aavelone = await brands.findBySlug('aavelone-pharma')
+    expect(aavelone).not.toBeNull()
+    expect(aavelone?.description).toBeUndefined()
   })
 
   it('writes nothing and emits nothing on a second run', async () => {
